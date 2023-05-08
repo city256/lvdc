@@ -11,4 +11,3 @@ mqtt_fn.mqttc.subscribe(cfg.sub_topic, 0)
 
 print('main page')
 mqtt_fn.mqttc.loop_forever()
-

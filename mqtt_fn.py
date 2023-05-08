@@ -1,6 +1,12 @@
 import paho.mqtt.client as mqtt
-import operation_mode as op
+import config as cfg
+import ml
+from datetime import datetime
+
+now = datetime.now()
 mqttc = mqtt.Client()
+global msg_index
+msg_index=0
 
 def on_connect(client, userdata, flags, rc):
     # print("rc: " + str(rc))
@@ -19,11 +25,11 @@ def on_message(client, obj, msg):
 def on_publish(client, obj, mid):
     # 용도 : publish를 보내고 난 후 처리를 하고 싶을 때
     # 사실 이 콜백함수는 잘 쓰진 않는다.
-    print("mid: " + str(mid))
+    print("Publish Complete: " + str(mid))
 
 
 def on_subscribe(client, obj, mid, granted_qos):
-    print("Subscribe complete : " + str(mid) + " " + str(granted_qos))
+    print("Subscribe Complete : " + str(mid) + " " + str(granted_qos))
 
 # mqtt subscribe 메시지 처리
 def msg_handler(msg):
@@ -31,28 +37,44 @@ def msg_handler(msg):
 
     # set 명령어 처리
     if (msg_str[0:3]=="set"):
+        global msg_index
         msg_str=msg_str[4:]
         split_msg = msg_str.split("&")
-        mode_type = int(split_msg[1].split('=')[1])
-        # set msg 예) set?index=2&type=1&limit=21.5
-        # msg index 처리
-        msg_index = int(split_msg[0].split('=')[1])
-        print(msg_index)
+        recv_index = int(split_msg[0].split('=')[1])
 
-        # msg type 별 처리
-        if (mode_type == 1):
-            op.optimize_mode()
-        elif(mode_type == 2):
-            limit = float(split_msg[2].split('=')[1])
-            op.peak_mode(limit)
-        elif (mode_type == 3):
-            op.demand_mode()
-        elif (mode_type == 4):
-            op.pv_mode()
-        elif (mode_type == 5):
-            pf = float(split_msg[2].split('=')[1])
-            op.passive_mode(pf)
+        # msg index 처리
+        if (msg_index < recv_index):
+            msg_index = recv_index
+            print(f'index = {recv_index}')
+
+            mode_type = int(split_msg[1].split('=')[1])
+            # set msg 예) set?index=2&type=1&limit=21.5
+            # msg type 별 처리
+            if (mode_type == 1): # 최적모드
+                pf = ml.optimize_mode()
+                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                mqttc.publish(cfg.pub_topic, pub_msg)
+            elif (mode_type == 2): # 피크제어
+                limit = float(split_msg[2].split('=')[1])
+                pf = ml.peak_mode(limit)
+                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                mqttc.publish(cfg.pub_topic, pub_msg)
+            elif (mode_type == 3): # 수요관리
+                pf = ml.demand_mode()
+                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                mqttc.publish(cfg.pub_topic, pub_msg)
+            elif (mode_type == 4): # 태양광연계
+                pf = ml.pv_mode()
+                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                mqttc.publish(cfg.pub_topic, pub_msg)
+            elif (mode_type == 5): # 수동제어
+                pf = float(split_msg[2].split('=')[1])
+                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                mqttc.publish(cfg.pub_topic, pub_msg)
+                print(f'passive, power_reference={pf}')
+            else:
+                print("Unknown type msg")
         else:
-            print("Unknown type msg")
+            print('Ignore Index Msg')
     else:
         print('Unknown Msg')

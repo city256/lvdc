@@ -20,18 +20,10 @@ LVDC 마이크로그리드 ESS연계모드 개발
 load_predict()
 pv_predict()
 
-peekControl()
-efficiency()
-DSM()
-pv()
+peak_mode()
+demand_mode()
+optimize_mode()
+pv_mode()
+passive_mode()
 
-microgrid()
-{
-mqtt_receive()
-switch(operationmode())
-
-}
-
-operationmode(pv()/DSM()/efficiency()/peekControl())
-
-MariaDB, MQTT 활용 
+Pandas, pymysql, paho-MQTT 활용 
