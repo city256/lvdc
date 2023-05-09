@@ -45,31 +45,31 @@ def msg_handler(msg):
         # msg index 처리
         if (msg_index < recv_index):
             msg_index = recv_index
-            print(f'index = {recv_index}')
-
             mode_type = int(split_msg[1].split('=')[1])
+
+            print(f'msg_index = {recv_index}, type = {mode_type}')
             # set msg 예) set?index=2&type=1&limit=21.5
             # msg type 별 처리
             if (mode_type == 1): # 최적모드
                 pf = ml.optimize_mode()
-                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                pub_msg = f'set?msg_index={msg_index}&type={mode_type}&power_reference={pf}'
                 mqttc.publish(cfg.pub_topic, pub_msg)
             elif (mode_type == 2): # 피크제어
                 limit = float(split_msg[2].split('=')[1])
                 pf = ml.peak_mode(limit)
-                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                pub_msg = f'set?msg_index={msg_index}&type={mode_type}&power_reference={pf}'
                 mqttc.publish(cfg.pub_topic, pub_msg)
             elif (mode_type == 3): # 수요관리
                 pf = ml.demand_mode()
-                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                pub_msg = f'set?msg_index={msg_index}&type={mode_type}&power_reference={pf}'
                 mqttc.publish(cfg.pub_topic, pub_msg)
             elif (mode_type == 4): # 태양광연계
                 pf = ml.pv_mode()
-                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                pub_msg = f'set?msg_index={msg_index}&type={mode_type}&power_reference={pf}'
                 mqttc.publish(cfg.pub_topic, pub_msg)
             elif (mode_type == 5): # 수동제어
                 pf = float(split_msg[2].split('=')[1])
-                pub_msg = f'set?ems_index={msg_index}&type=5&power_reference={pf}'
+                pub_msg = f'set?msg_index={msg_index}&type={mode_type}&power_reference={pf}'
                 mqttc.publish(cfg.pub_topic, pub_msg)
                 print(f'passive, power_reference={pf}')
             else:
