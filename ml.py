@@ -1,9 +1,21 @@
 import db
+import datetime
+now = datetime.datetime.now()
+now_date = datetime.datetime.now().strftime('%Y-%m-%d')
+now_hour = datetime.datetime.now().strftime('%H:%M:%S')
 
 
 def predict_load():
-    pv_df = db.get_pv_monitor()
+    # 날짜 포맷 변경 및 과거 데이터 기간 설정
+    past = now - datetime.timedelta(days=90)
+    past = past.strftime('%Y-%m-%d')
+
+    pv_df = db.get_pv_monitor(past, now_date)
     print(pv_df)
+
+    pv_df.to_csv('test.csv')
+
+
     return
 
 def predict_pv():

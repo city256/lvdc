@@ -2,6 +2,7 @@ import pandas as pd
 # import mariadb
 import sys
 import pymysql
+import datetime
 
 # maria db config
 db_user = "root"
@@ -9,6 +10,10 @@ db_pw = "Lvdc12341@"
 db_name = "etri_lvdc"
 db_port = 13306
 url = 'lvdc.iptime.org'
+
+now = datetime.datetime.now()
+now_date = datetime.datetime.now().strftime('%Y-%m-%d')
+now_hour = datetime.datetime.now().strftime('%H:%M:%S')
 
 pv_colum = ['id', 'date', 'date', 'date', 'gcur', 'gmos1', 'gmos2', 'gpower', 'gvolt',
                                           'h1', 'h2', 'op', 'day', 'pvcur', 'pvmos1', 'pvmos2', 'pvnum', 'pvop',
@@ -32,15 +37,18 @@ def conn_db():
         sys.exit(1)
     return conn
 
-def get_pv_monitor():
+def get_pv_monitor(past, now):
     conn = conn_db()
     result = pd.DataFrame(columns=pv_colum)
     cur = conn.cursor()
-    query = "SELECT * from pv_converter_monitoring"
+    # query = "SELECT * from pv_converter_monitoring"
+    # past 부터 now 까지의 데이터 쿼리
+    query = f'select * from pv_converter_monitoring where collected_date between \'{past}\' and \'{now}\' '
+
     cur.execute(query)
     resultset = cur.fetchall()
 
-
+    i=0
     # sql Query 응답을 pd.DataFrame 으로 변경
     for id, date1, date2, date3, g_cur, g_mos1, g_mos2, g_power, g_volt, hw1, hw2, op, day, pv_cur, pv_mos1, pv_mos2, pv_num, pv_op, pv_power, pv_volt, sw1, sw2, dev_id in resultset:
 
@@ -48,7 +56,8 @@ def get_pv_monitor():
                 pv_mos2, pv_num, pv_op, pv_power, pv_volt, sw1, sw2, dev_id]
 
         # Dataframe에 한행 씩 data 추가
-        result.loc[id] = data
+        result.loc[i] = data
+        i += 1
 
     conn.commit()
     conn.close()
