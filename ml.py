@@ -1,8 +1,12 @@
 import db
 import datetime
+import mqtt_fn
+import config as cfg
+
 now = datetime.datetime.now()
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
 now_hour = datetime.datetime.now().strftime('%H:%M:%S')
+
 
 
 def predict_load():
@@ -14,8 +18,8 @@ def predict_load():
     print(pv_df)
 
     pv_df.to_csv('test.csv')
-
-
+    mqtt_fn.mqttc.publish(cfg.pub_pms_topic, f'get?p_index={mqtt_fn.pms_index}&soc_report')
+    mqtt_fn.pms_index+=1
     return
 
 def predict_pv():
