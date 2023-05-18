@@ -14,17 +14,27 @@ def predict_load():
     past = now - datetime.timedelta(days=90)
     past = past.strftime('%Y-%m-%d')
 
-    pv_df = db.get_pv_monitor(past, now_date)
-    print(pv_df)
+    pred_load = db.get_pv_monitor(past, now_date)
+    print(pred_load)
 
-    pv_df.to_csv('test.csv')
+    pred_load.to_csv('test.csv')
     mqtt_fn.mqttc.publish(cfg.pub_pms_topic, f'get?p_index={mqtt_fn.pms_index}&soc_report')
     mqtt_fn.pms_index+=1
-    return
+    # load는 DC 주택, DC 빌딩, AC 주택 3가지 부하량의 합
+
+
+    return pred_load
 
 def predict_pv():
+    past = now - datetime.timedelta(days=90)
+    past = past.strftime('%Y-%m-%d')
 
-    return
+    pred_pv = db.get_pv_monitor(past, now_date)
+    # 현재값 불러올때 pv는 데이터를
+    # get?p_index&pqms_load
+
+
+    return pred_pv
 
 def data_preprocessing():
     return

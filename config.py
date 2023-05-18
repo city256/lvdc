@@ -11,3 +11,9 @@ db_user = "root"
 db_pw = "Lvdc12341@"
 db_name = "etri_lvdc"
 db_port = 13306
+
+# microgrid spec
+ess_capacity = 800
+converter_capacity = 250
+pv_capacity = 250
+
