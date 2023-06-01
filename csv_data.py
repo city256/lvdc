@@ -7,7 +7,7 @@ import csv
 import re
 import matplotlib.pyplot as plt
 
-dataset = pd.read_csv('load_test.csv', encoding='CP949')
+dataset = pd.read_csv('load_train.csv', encoding='CP949')
 
 
 print(dataset)
@@ -36,15 +36,17 @@ for year, month, hour, load1, load2 in dataset.values:
 
 
 data = data.sort_values(by='date', ignore_index=True)
-data.to_csv('testset.csv')
+data.to_csv('2020_load.csv')
 
 
 data.plot()
 plt.title('test Graph')
-#plt.plot(data['date'], data['load'], 'rs--')
+plt.legend()
+
+plt.plot(data)
 plt.xlabel("date")
 plt.ylabel("load")
-plt.show()
+
 
 #data = pd.DataFrame(columns=['date','load'])
 
