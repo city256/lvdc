@@ -33,11 +33,8 @@ for year, month, hour, load1, load2 in dataset.values:
         #print('timedate Value Error', ve)
         ve
 
-
-
 data = data.sort_values(by='date', ignore_index=True)
 data.to_csv('2020_load.csv')
-
 
 data.plot()
 plt.title('test Graph')
@@ -47,9 +44,9 @@ plt.plot(data)
 plt.xlabel("date")
 plt.ylabel("load")
 
-
 #data = pd.DataFrame(columns=['date','load'])
 
 print(data)
+
 
 
