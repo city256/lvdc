@@ -88,6 +88,7 @@ def msg_handler(msg):
     elif (json_str['p_type'] == 'set' and json_str['p_cmd'] == 'response'):
         print(f'set Response Msg= {json_str}')
         mqttc.publish(cfg.pub_ems_topic, str(json_str))
+
     # pms get response 처리
     elif (json_str['p_type'] == 'get' and json_str['p_cmd'] == 'response'):
         print(f'get Response Msg= {json_str}')

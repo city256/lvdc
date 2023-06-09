@@ -20,7 +20,9 @@ def predict_load():
     pred_load.to_csv('test.csv')
     mqtt_fn.mqttc.publish(cfg.pub_pms_topic, f'get?p_index={mqtt_fn.pms_index}&soc_report')
     mqtt_fn.pms_index+=1
-    # load는 DC 주택, DC 빌딩, AC 주택 3가지 부하량의 합
+
+
+
 
 
     return pred_load
@@ -50,7 +52,7 @@ def calculate_pf(limit=None, time=None, pf=None):
     else:
         print()
 
-    pf = 12.1
+    pf = 12.1 # test pf
 
     return pf
 

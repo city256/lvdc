@@ -71,6 +71,10 @@ def get_pqms_monitor():
     cur.execute(query)
     resultset = cur.fetchall()
 
+    # load는 DC 주택, DC 빌딩, AC 주택 3가지 부하량의 합
+    # select interlink, dcdc, dchome from pqm_monitoring where past and now_date
+    # select interlink, dcdc, dchome from pqm_monitoring where collected_date < date_add(now(), interval -60 day)
+
     for date, time_index, acdc, pv, essCharge, essDischarge, dcHome, interlink in resultset:
         data = [date, time_index, acdc, pv, essCharge, essDischarge, dcHome, interlink]
 
