@@ -1,8 +1,8 @@
 # mqtt config
 url = 'lvdc.iptime.org'
 sub_topic = 'lvdc/ais'
-pub_pms_topic = 'lvdc/ess'
-pub_ems_topic = 'lvdc/ems/ess'
+pub_pms_topic = 'lvdc/pms'
+pub_ems_topic = 'lvdc/ems/pms'
 mqtt_port = 1883
 
 # maria db config
