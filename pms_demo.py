@@ -128,7 +128,7 @@ def msg_handler(msg):
             pub_msg = response_converter_info(recv_index)
             mqtt.publish(pub_ems_topic, pub_msg)
             print("pub converter_info")
-        elif (split_msg[1].split('=')[0]=='soc_report'): # soc_report msg
+        elif split_msg[1].split('=')[0]== 'soc_report': # soc_report msg
             pub_msg = response_soc_report(recv_index)
             mqtt.publish(pub_ais_topic, pub_msg)
             print("pub soc_report")
