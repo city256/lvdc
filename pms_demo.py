@@ -1,5 +1,8 @@
-
+import datetime
+import json
 import paho.mqtt.client as mqttc
+import random
+import time
 
 # mqtt config
 url = 'lvdc.iptime.org'
@@ -9,22 +12,88 @@ pub_ems_topic = 'lvdc/ems/pms'
 mqtt_port = 1883
 p_index=0
 soc = 0
+
 # response msg
-response_soc_report = {
-    'p_type':'get',
-    'p_id':'MG1_SVR_PMS',
-    'p_cmd':'response/soc_report',
-    'p_index':p_index,
-    'p_error':'0',
-    'p_time':'',
-    'p_contents':{'min_soc':'10',
-                  'max_soc':'90',
-                  'current_soc':soc,
-                  'weather_temperature':'',
-                  'weather_humidity':'',
-                  'weather_sunlight':''
+def response_soc_report(p_index):
+    response = {
+        'p_type': 'get',
+        'p_id': 'MG1_SVR_PMS',
+        'p_cmd': 'response/soc_report',
+        'p_index': p_index,
+        'p_error': 0,
+        'p_time': '{}'.format(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")),
+        'p_contents': {
+            'min_soc': 10,
+            'max_soc': 90,
+            'current_soc': random.randint(11, 90),
+            'weather_temperature': round(random.uniform(0, 40), 1),
+            'weather_humidity': round(random.uniform(0, 40), 1),
+            'weather_sunlight': round(random.uniform(0, 40), 1)
+        }
     }
-}
+    json_string = json.dumps(response)
+    return json_string
+
+def response_converter_info(p_index):
+    response = {
+        'p_type': 'get',
+        'p_id': 'MG1_SVR_PMS',
+        'p_cmd': 'response/converter_info',
+        'p_index': p_index,
+        'p_error': 0,
+        'p_time': '{}'.format(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")),
+        'p_contents': {
+            'operation_state':0,
+            'input_voltage':225.1,
+            'input_current':213.3,
+            'input_power':222.0,
+            'output_voltage':231.8,
+            'output_current':314.8,
+            'output_power':110.6,
+            'converter_temperature':round(random.uniform(0, 40), 1),
+            'min_soc': 10,
+            'max_soc': 90,
+            'current_soc': random.randint(11, 90),
+            'weather_temperature': round(random.uniform(0, 40), 1),
+            'weather_humidity': round(random.uniform(0, 40), 1),
+            'weather_sunlight': round(random.uniform(0, 40), 1)
+        }
+    }
+    json_string = json.dumps(response)
+    return json_string
+
+def response_operation_state(p_index, state):
+    response = {
+        'p_type': 'get',
+        'p_id': 'MG1_SVR_PMS',
+        'p_cmd': 'response/operation_state',
+        'p_index': p_index,
+        'p_error': 0,
+        'p_time': '{}'.format(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")),
+        'p_contents': {
+            'operation_state': state
+        }
+    }
+    json_string = json.dumps(response)
+    return json_string
+
+def response_operation_mode(p_index, mode, pref=-300.1):
+    if (pref == -300.1):
+        pref = round(random.uniform(-250, 250), 1)
+    response = {
+        'p_type': 'get',
+        'p_id': 'MG1_SVR_PMS',
+        'p_cmd': 'response/operation_mode',
+        'p_index': p_index,
+        'p_error': 0,
+        'p_time': '{}'.format(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")),
+        'p_contents': {
+            'operation_mode': mode,
+            'power_reference': pref
+        }
+    }
+    json_string = json.dumps(response)
+    return json_string
 
 def on_connect(client, userdata, flags, rc):
     # print("rc: " + str(rc))
@@ -36,7 +105,6 @@ def on_connect(client, userdata, flags, rc):
 # 브로커에게 메시지가 도착하면 on_message 실행 (이벤트가 발생하면 호출)
 def on_message(client, obj, msg):
     print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
-
     msg_handler(msg.payload)
 
 def on_publish(client, obj, mid):
@@ -44,37 +112,43 @@ def on_publish(client, obj, mid):
     # 사실 이 콜백함수는 잘 쓰진 않는다.
     print("Publish Complete: " + str(mid))
 
-
 def on_subscribe(client, obj, mid, granted_qos):
     print("Subscribe Complete : " + str(mid) + " " + str(granted_qos))
 
 def msg_handler(msg):
     msg_str = str(msg)[2:-1] # payload 문자열처리
 
-    # set 명령어 처리
-    if (msg_str[0:3]=="get"):
-        print('get')
+    # get 명령어 처리
+    if msg_str[0:3]== "get":
         msg_str=msg_str[4:]
         split_msg = msg_str.split("&")
+        recv_index = int(split_msg[0].split('=')[1])
 
-        if (split_msg[1].split('=')[0]=='converter_info'): # converter_info msg
-            pub_msg = 'response/converter_info'
+        if split_msg[1].split('=')[0]== 'converter_info': # converter_info msg
+            pub_msg = response_converter_info(recv_index)
             mqtt.publish(pub_ems_topic, pub_msg)
             print("pub converter_info")
         elif (split_msg[1].split('=')[0]=='soc_report'): # soc_report msg
-            pub_msg = 'response/soc_report'
+            pub_msg = response_soc_report(recv_index)
             mqtt.publish(pub_ais_topic, pub_msg)
             print("pub soc_report")
-    elif (msg_str[0:3]=="set"):
-        print('set')
+    # set 명령어 처리
+    elif msg_str[0:3]== "set":
         msg_str = msg_str[4:]
         split_msg = msg_str.split("&")
-        if (split_msg[1].split('=')[0]=='operation_state'): # operation_state msg
-            pub_msg = 'response/operation_state'
+        recv_index = int(split_msg[0].split('=')[1])
+        if split_msg[1].split('=')[0]== 'operation_state': # operation_state msg
+            state = int(split_msg[1].split('=')[1])
+            pub_msg = response_operation_state(recv_index, state)
             mqtt.publish(pub_ais_topic, pub_msg)
             print("pub operation_state")
-        elif (split_msg[1].split('=')[0]=='operation_mode'): # operation_mode msg
-            pub_msg = 'response/operation_mode'
+        elif split_msg[1].split('=')[0]== 'operation_mode': # operation_mode msg
+            mode = int(split_msg[1].split('=')[1])
+            if mode == 6:
+                pub_msg = response_operation_mode(recv_index, mode)
+            else:
+                pref = float(split_msg[2].split('=')[1])
+                pub_msg = response_operation_mode(recv_index, mode, pref)
             mqtt.publish(pub_ais_topic, pub_msg)
             print("pub operation_mode")
     else:
