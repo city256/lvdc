@@ -8,6 +8,23 @@ pub_ais_topic = 'lvdc/ais'
 pub_ems_topic = 'lvdc/ems/pms'
 mqtt_port = 1883
 p_index=0
+soc = 0
+# response msg
+response_soc_report = {
+    'p_type':'get',
+    'p_id':'MG1_SVR_PMS',
+    'p_cmd':'response/soc_report',
+    'p_index':p_index,
+    'p_error':'0',
+    'p_time':'',
+    'p_contents':{'min_soc':'10',
+                  'max_soc':'90',
+                  'current_soc':soc,
+                  'weather_temperature':'',
+                  'weather_humidity':'',
+                  'weather_sunlight':''
+    }
+}
 
 def on_connect(client, userdata, flags, rc):
     # print("rc: " + str(rc))
