@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import datetime
 import json
 import paho.mqtt.client as mqttc
