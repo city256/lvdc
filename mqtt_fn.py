@@ -48,50 +48,56 @@ def msg_handler(msg):
         msg_str=msg_str[4:]
         split_msg = msg_str.split("&")
         recv_index = int(split_msg[0].split('=')[1]) # p_index value
-        mode_type = int(split_msg[1].split('=')[1]) # type value
+        operation_mode = int(split_msg[1].split('=')[1]) # type value
 
         # p_index 처리
         if (split_msg[0].split('=')[0] == 'p_index' and p_index < recv_index):
             p_index = recv_index
 
-            print(f'p_index = {recv_index}, type = {mode_type}')
+            print(f'p_index = {recv_index}, operation_mode = {operation_mode}')
             # set msg 예) set?p_index=2&type=1&limit=21.5
             # msg type 별 처리
-            if (split_msg[1].split('=')[0]=='type' and mode_type == 1): # 최적모드
+            if (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 1): # 최적모드
                 pf = ml.optimize_mode()
-                pub_msg = f'set?p_index={p_index}&type={mode_type}&power_reference={pf}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
-            elif (split_msg[1].split('=')[0]=='type' and mode_type == 2): # 피크제어
+            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 2): # 피크제어
                 limit = float(split_msg[2].split('=')[1])
                 pf = ml.peak_mode(limit)
-                pub_msg = f'set?p_index={p_index}&type={mode_type}&power_reference={pf}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
-            elif (split_msg[1].split('=')[0]=='type' and mode_type == 3): # 수요관리
+            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 3): # 수요관리
                 pf = ml.demand_mode()
-                pub_msg = f'set?p_index={p_index}&type={mode_type}&power_reference={pf}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
-            elif (split_msg[1].split('=')[0]=='type' and mode_type == 4): # 태양광연계
+            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 4): # 태양광연계
                 pf = ml.pv_mode()
-                pub_msg = f'set?p_index={p_index}&type={mode_type}&power_reference={pf}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
-            elif (split_msg[1].split('=')[0]=='type' and mode_type == 5): # 수동제어
+            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 5): # 수동제어
                 pf = float(split_msg[2].split('=')[1])
-                pub_msg = f'set?p_index={p_index}&type={mode_type}&power_reference={pf}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
                 print(f'passive, power_reference={pf}')
+            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 6): # 독립모드
+                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}'
+                mqttc.publish(cfg.pub_pms_topic, pub_msg)
             else:
-                print("Unknown type msg")
+                print("Unknown operation_mode msg")
         else:
             print('Ignore Index Msg')
 
     # pms set response 처리
-    elif (json_str['p_type'] == 'set' and json_str['p_cmd'] == 'response'):
-        print(f'set Response Msg= {json_str}')
-        mqttc.publish(cfg.pub_ems_topic, str(json_str))
+    elif json_str['p_type'] == 'set':
+        if json_str['p_cmd'] == 'response/operation_state':
+            mqttc.publish(cfg.pub_ems_topic, json_str)
+        elif json_str['p_cmd'] == 'response/operation_state':
+            mqttc.publish(cfg.pub_ems_topic, json_str)
+        else :
+            print(f'Unknown Response Msg= {json_str}')
 
     # pms get response 처리
-    elif (json_str['p_type'] == 'get' and json_str['p_cmd'] == 'response'):
+    elif (json_str['p_type'] == 'get' and json_str['p_cmd'] == 'response/soc_report'):
         print(f'get Response Msg= {json_str}')
-
     else:
         print(f'Unknown Msg= {msg_str}')
