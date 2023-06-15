@@ -6,7 +6,7 @@ import json
 
 now = datetime.now()
 mqttc = mqtt.Client()
-global p_index, pms_index
+
 p_index=0
 pms_index=0
 
