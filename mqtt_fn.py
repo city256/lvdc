@@ -89,10 +89,10 @@ def msg_handler(msg):
 
     # pms set response 처리
     elif json_str['p_type'] == 'set':
-        if json_str['p_cmd'] == 'response/operation_state':
-            mqttc.publish(cfg.pub_ems_topic, json_str)
+        if json_str['p_cmd'] == 'response/operation_mode':
+            mqttc.publish(cfg.pub_ems_topic, str(json_str))
         elif json_str['p_cmd'] == 'response/operation_state':
-            mqttc.publish(cfg.pub_ems_topic, json_str)
+            mqttc.publish(cfg.pub_ems_topic, str(json_str))
         else :
             print(f'Unknown Response Msg= {json_str}')
 
