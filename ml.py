@@ -8,7 +8,6 @@ now_date = datetime.datetime.now().strftime('%Y-%m-%d')
 now_hour = datetime.datetime.now().strftime('%H:%M:%S')
 
 
-
 def predict_load():
     # 날짜 포맷 변경 및 과거 데이터 기간 설정
     past = now - datetime.timedelta(days=90)
