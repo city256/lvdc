@@ -1,15 +1,12 @@
 import datetime
 import string
-
 import pandas as pd
 import numpy as np
 import csv
 import re
 import matplotlib.pyplot as plt
 
-dataset = pd.read_csv('pv_data.csv', encoding='CP949')
-
-print(dataset)
+dataset = pd.read_csv('pv_data_2021.csv', encoding='CP949')
 data = pd.DataFrame()
 hour =[0]*24
 
@@ -31,7 +28,7 @@ hour[12], hour[13], hour[14], hour[15], hour[16], hour[17], hour[18], hour[19], 
             data = pd.concat([data, temp], ignore_index=True)
 
 data = data.sort_values(by='date', ignore_index=True)
-#data.to_csv('2020_pv.csv')
+data.to_csv('2021_pv.csv')
 
 print(data)
 
