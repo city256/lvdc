@@ -51,7 +51,7 @@ def msg_handler(msg):
         operation_mode = int(split_msg[1].split('=')[1]) # type value
 
         # p_index 처리
-        if (split_msg[0].split('=')[0] == 'p_index' and p_index < recv_index):
+        if (split_msg[0].split('=')[0] == 'p_index' or p_index < recv_index):
             p_index = recv_index
 
             print(f'p_index = {recv_index}, operation_mode = {operation_mode}')
@@ -82,6 +82,9 @@ def msg_handler(msg):
             elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 6): # 독립모드
                 pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
+            elif (split_msg[1].split('=')[0]=='operation_state'): # 동작 제어
+                pub_msg = f'set?p_index={p_index}&operation_state={operation_mode}'
+                mqttc.publish(cfg.pub_pms_topic, pub_msg)
             else:
                 print("Unknown operation_mode msg")
         else:
@@ -89,10 +92,10 @@ def msg_handler(msg):
 
     # pms set response 처리
     elif json_str['p_type'] == 'set':
-        if json_str['p_cmd'] == 'response/operation_state':
-            mqttc.publish(cfg.pub_ems_topic, json_str)
+        if json_str['p_cmd'] == 'response/operation_mode':
+            mqttc.publish(cfg.pub_ems_topic, str(json_str))
         elif json_str['p_cmd'] == 'response/operation_state':
-            mqttc.publish(cfg.pub_ems_topic, json_str)
+            mqttc.publish(cfg.pub_ems_topic, str(json_str))
         else :
             print(f'Unknown Response Msg= {json_str}')
 
@@ -101,3 +104,4 @@ def msg_handler(msg):
         print(f'get Response Msg= {json_str}')
     else:
         print(f'Unknown Msg= {msg_str}')
+

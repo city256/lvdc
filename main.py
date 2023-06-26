@@ -11,3 +11,7 @@ mqtt_fn.mqttc.subscribe(cfg.sub_topic, 0)
 
 print('main page')
 mqtt_fn.mqttc.loop_forever()
+
+print('set?p_index=2&operation_state=1')
+print('set?p_index=2&operation_mode=2&peak_limit=216')
+print('get?p_index=5&soc_report')
