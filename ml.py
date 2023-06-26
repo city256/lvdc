@@ -20,10 +20,6 @@ def predict_load():
     mqtt_fn.mqttc.publish(cfg.pub_pms_topic, f'get?p_index={mqtt_fn.pms_index}&soc_report')
     mqtt_fn.pms_index+=1
 
-
-
-
-
     return pred_load
 
 def predict_pv():
@@ -33,7 +29,6 @@ def predict_pv():
     pred_pv = db.get_pv_monitor(past, now_date)
     # 현재값 불러올때 pv는 데이터를
     # get?p_index&pqms_load
-
 
     return pred_pv
 

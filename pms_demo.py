@@ -114,12 +114,9 @@ def response_converter_info(p_index):
         'p_contents': {
             'operation_state':operation_state,
             'input_voltage':round(random.uniform(100, 250), 1),
-            'input_current':round(random.uniform(100, 250), 1),
             'input_power':round(random.uniform(100, 250), 1),
             'output_voltage':round(random.uniform(100, 250), 1),
-            'output_current':round(random.uniform(100, 250), 1),
             'output_power':round(random.uniform(100, 250), 1),
-            'converter_temperature':round(random.uniform(0, 40), 1),
             'min_soc': 10,
             'max_soc': 90,
             'current_soc': round(random.uniform(11, 90), 1),
