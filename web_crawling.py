@@ -1,14 +1,10 @@
 import time
-
 from selenium import webdriver
 from bs4 import BeautifulSoup
-from selenium.webdriver.support.ui import Select
+import pandas as pd
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
-# 웹 드라이버 경로 설정 (여기서는 Chrome을 사용하였습니다.)
+# 웹 드라이버 경로 설정 (여기서는 Chrome을 사용하였습니다.)b
 # 웹 드라이버는 각 브라우저의 공식 웹사이트에서 다운로드 받을 수 있습니다.
 driver = webdriver.Chrome()
 
@@ -39,10 +35,20 @@ html = driver.page_source
 
 # BeautifulSoup 객체 생성
 soup = BeautifulSoup(html, 'html.parser')
+pf = pd.DataFrame(columns=['time', 'pv'])
+pv = driver.find_element(By.ID,'toEnergy').text
+hour = pv.split('\n')
+i = 0
+for x in hour:
+    energy = x.split(' ')
+    # 특정 시간대 값이 누락 되었을 때
+    if energy[1] == '-':
+        pf.loc[i] = [energy[0], energy[1]]
+    else:
+        pf.loc[i] = [energy[0], float(energy[1]) * 1000]
+    i+=1
 
-'''print(driver.find_element(By.ID,'toEnergy').text)
-print(driver.find_element(By.ID,'areaName').text)'''
-print(driver.find_element(By.ID,'toEnergy').text)
+print(pf)
 
 # 웹 드라이버 종료
 driver.quit()
