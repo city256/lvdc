@@ -37,7 +37,7 @@ def on_subscribe(client, obj, mid, granted_qos):
 def msg_handler(msg):
     msg_str = str(msg)[2:-1] # payload 문자열처리
     try:
-        json_str = json.loads(msg_str)
+        msg_json = json.loads(msg_str) # payload json 처리
         print("json msg received")
     except json.JSONDecodeError as e:
         print(f"msg not json format: {e}")
@@ -91,17 +91,17 @@ def msg_handler(msg):
             print('Ignore Index Msg')
 
     # pms set response 처리
-    elif json_str['p_type'] == 'set':
-        if json_str['p_cmd'] == 'response/operation_mode':
-            mqttc.publish(cfg.pub_ems_topic, str(json_str))
-        elif json_str['p_cmd'] == 'response/operation_state':
-            mqttc.publish(cfg.pub_ems_topic, str(json_str))
+    elif msg_json['p_type'] == 'set':
+        if msg_json['p_cmd'] == 'response/operation_mode':
+            mqttc.publish(cfg.pub_ems_topic, msg_str)
+        elif msg_json['p_cmd'] == 'response/operation_state':
+            mqttc.publish(cfg.pub_ems_topic, msg_str)
         else :
-            print(f'Unknown Response Msg= {json_str}')
+            print(f'Unknown Response Msg= {msg_json}')
 
     # pms get response 처리
-    elif (json_str['p_type'] == 'get' and json_str['p_cmd'] == 'response/soc_report'):
-        print(f'get Response Msg= {json_str}')
+    elif (msg_json['p_type'] == 'get' and msg_json['p_cmd'] == 'response/soc_report'):
+        print(f'get Response Msg= {msg_json}')
     else:
         print(f'Unknown Msg= {msg_str}')
 

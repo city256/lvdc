@@ -37,6 +37,10 @@ html = driver.page_source
 soup = BeautifulSoup(html, 'html.parser')
 pf = pd.DataFrame(columns=['time', 'pv'])
 pv = driver.find_element(By.ID,'toEnergy').text
+
+# 웹 드라이버 종료
+driver.quit()
+
 hour = pv.split('\n')
 i = 0
 for x in hour:
@@ -49,6 +53,3 @@ for x in hour:
     i+=1
 
 print(pf)
-
-# 웹 드라이버 종료
-driver.quit()
