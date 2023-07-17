@@ -13,7 +13,7 @@ mqtt_port = 1883
 
 # global parameters
 p_index=0
-operation_state = None
+operation_state = 1
 
 # event_msg
 def event_operation_state():
@@ -113,6 +113,7 @@ def response_converter_info(p_index):
         "p_time": "{}".format(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")),
         "p_contents": {
             "operation_state":operation_state,
+            "charging_state":random.randint(0,3),
             "input_voltage":round(random.uniform(100, 250), 1),
             "input_power":round(random.uniform(100, 250), 1),
             "output_voltage":round(random.uniform(100, 250), 1),
@@ -120,6 +121,7 @@ def response_converter_info(p_index):
             "min_soc": 10,
             "max_soc": 90,
             "current_soc": round(random.uniform(11, 90), 1),
+            "power_reference": round(random.uniform(-250, 251), 1),
             "weather_temperature": round(random.uniform(0, 40), 1),
             "weather_humidity": round(random.uniform(0, 40), 1),
             "weather_sunlight": round(random.uniform(0, 40), 1)
@@ -230,6 +232,7 @@ mqtt.connect(host=url, port=mqtt_port)
 mqtt.subscribe(sub_topic, 0)
 
 mqtt.loop_forever()
+
 '''
 while True:
     try:
@@ -245,5 +248,4 @@ while True:
     elif split_msg[0]=='batt':
         pub_msg = event_battery_fault(color)
         mqtt.publish(pub_ems_topic, pub_msg)
-
 '''
