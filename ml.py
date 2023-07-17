@@ -21,7 +21,7 @@ url = 'http://bd.kma.go.kr/kma2020/fs/energySelect2.do?menuCd=F050702000'
 now = datetime.datetime.now()
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
 now_hour = datetime.datetime.now().strftime('%H:%M:%S')
-print(now_date+":00")
+
 
 def create_dataset(dataset, look_back=1):
     dataX, dataY = [], []
@@ -126,7 +126,7 @@ def predict_load():
 
     # 예측 시간 생성
     prediction_dates = pd.date_range(df.index[-1] + pd.Timedelta(hours=1), predict_until, freq='H')
-
+    print(predicted_power_usage[0])
     error = []
     # 날짜 설정
     for i in range(24):
