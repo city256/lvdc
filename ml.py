@@ -234,7 +234,8 @@ def optimize_mode():
     pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H')
     load['date'] = pd.to_datetime(load['date'], format='%Y-%m-%d %H')
     #predWL = load['date'].loc[now_time+':00:00']
-    predWPV = pv.loc[pv['date']==now_time, 'pv']
+    predWPV = float(pv.loc[pv['date']==now_time, 'pv'])
+
 
     print(pv)
     print(load)
