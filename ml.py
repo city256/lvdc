@@ -17,11 +17,12 @@ import matplotlib.pyplot as plt
 
 # 기상청 태양광발전량 예측
 url = 'http://bd.kma.go.kr/kma2020/fs/energySelect2.do?menuCd=F050702000'
+pv_capasity = 0.25 # (mW) 0.25 = 250kW
 
 now = datetime.datetime.now()
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
 now_hour = datetime.datetime.now().strftime('%H:%M:%S')
-
+now_time = datetime.datetime.now().strftime('%Y-%m-%d %H')
 
 def create_dataset(dataset, look_back=1):
     dataX, dataY = [], []
@@ -32,23 +33,12 @@ def create_dataset(dataset, look_back=1):
     return np.array(dataX), np.array(dataY)
 
 def predict_load():
-    '''# 날짜 포맷 변경 및 과거 데이터 기간 설정
-    past = now - datetime.timedelta(days=90)
-    past = past.strftime('%Y-%m-%d')
-
-    pred_load = db.get_pv_monitor(past, now_date)
-    #print(pred_load)
-
-    pred_load.to_csv('test.csv')
-    mqtt_fn.mqttc.publish(cfg.pub_pms_topic, f'get?p_index={mqtt_fn.pms_index}&soc_report')
-    mqtt_fn.pms_index+=1'''
-
     start_time = time.time()
     # 데이터 로드, 여기서는 'df'라는 이름의 데이터프레임을 가정합니다.
     df = pd.read_csv('load6_2020.csv')
 
     # '날짜'를 datetime으로 변환하고 인덱스로 설정
-    df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d %H')
+    df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d')
     df = df.set_index('date')
 
     # 데이터 정규화
@@ -81,7 +71,7 @@ def predict_load():
 
     # 모델 훈련 (GPU 사용)
     with tf.device("/device:GPU:0"):
-        model.fit(trainX, trainY, epochs=50, batch_size=12, verbose=0)
+        model.fit(trainX, trainY, epochs=50, batch_size=12, verbose=1)
 
     # 테스트 데이터에 대한 예측값 생성
     testPredict = model.predict(testX)
@@ -91,18 +81,28 @@ def predict_load():
     df_actual = pd.read_csv('load1_2021.csv')
 
     # '날짜'를 datetime으로 변환하고 인덱스로 설정
-    df_actual['date'] = pd.to_datetime(df_actual['date'], format='%Y-%m-%d %H')
+    df_actual['date'] = pd.to_datetime(df_actual['date'], format='%Y-%m-%d')
     df_actual = df_actual.set_index('date')
 
     # 현재 시각
 
     # 예측 하려는 시간 설정
 
+    # 실제 데이터 로드
+    df_actual = pd.read_csv('load1_2021.csv')
+
+    # '날짜'를 datetime으로 변환하고 인덱스로 설정
+    df_actual['date'] = pd.to_datetime(df_actual['date'])
+    df_actual = df_actual.set_index('date')
+
     # 예측하려는 날짜 설정
     predict_until = pd.to_datetime('2021-01-07 23')
 
     # 예측값을 저장할 빈 리스트 생성
     predictions = []
+
+    # 예측 시간 생성
+    prediction_dates = pd.date_range(df.index[-1] + pd.Timedelta(hours=1), predict_until, freq='H')
 
     # 현재까지의 전체 데이터 사용
     current_data = np.copy(scaled_data)
@@ -124,34 +124,40 @@ def predict_load():
     # 예측값 스케일 역변환
     predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
 
-    # 예측 시간 생성
-    prediction_dates = pd.date_range(df.index[-1] + pd.Timedelta(hours=1), predict_until, freq='H')
-    print(predicted_power_usage[0])
-    error = []
-    # 날짜 설정
-    for i in range(24):
-        for j in range(1, 8):
-            date_to_show = pd.to_datetime('2021-01-' + str(j).zfill(2) + ' ' + str(i).zfill(2))
+    # 예측값 pd 파일 생성
+    pred_load = pd.DataFrame()
 
-            # 해당 날짜의 실제 전력 사용량 출력
-            actual_power_usage = df_actual.loc[date_to_show, 'load']
-            #print(f'Actual power usage at {date_to_show}: {actual_power_usage}')
+    for i in range(len(predictions)):
+        temp = pd.DataFrame(data=[[prediction_dates[i], round(predictions[i][0]*10,2)]], columns=['date', 'load'])
+        pred_load = pd.concat([pred_load, temp], ignore_index=True)
 
-            # 해당 날짜의 예측된 전력 사용량 출력
-            predicted_power_usage = predictions[prediction_dates.get_loc(date_to_show)]
-            #print(f'Predicted power usage at {date_to_show}: {round(predicted_power_usage[0], 2)}')
+    '''
+        error = []
+        # 날짜 설정
+        for i in range(24):
+            for j in range(1, 8):
+                date_to_show = pd.to_datetime('2021-01-' + str(j).zfill(2) + ' ' + str(i).zfill(2))
 
-            # 오차율 계산
-            error_rate = (abs(actual_power_usage - predicted_power_usage[0]) / actual_power_usage) * 100
-            error.append(error_rate)
+                # 해당 날짜의 실제 전력 사용량 출력
+                actual_power_usage = df_actual.loc[date_to_show, 'load']
+                #print(f'Actual power usage at {date_to_show}: {actual_power_usage}')
 
-            # 오차율 출력
-            #print(f'Error rate at {date_to_show}: {error_rate:.2f}%')
+                # 해당 날짜의 예측된 전력 사용량 출력
+                predicted_power_usage = predictions[prediction_dates.get_loc(date_to_show)]
+                #print(f'Predicted power usage at {date_to_show}: {round(predicted_power_usage[0], 2)}')
 
-    print(f'average error rate : {np.mean(error):.2f}%')
-    print(f'Training Time : {time.time() - start_time}')
+                # 오차율 계산
+                error_rate = (abs(actual_power_usage - predicted_power_usage[0]) / actual_power_usage) * 100
+                error.append(error_rate)
 
-    return
+                # 오차율 출력
+                #print(f'Error rate at {date_to_show}: {error_rate:.2f}%')
+
+        print(f'average error rate : {np.mean(error):.2f}%')
+        print(f'Training Time : {time.time() - start_time}')
+    '''
+    pred_load.to_csv('pred_load.csv')
+    return pred_load
 
 def predict_pv():
 
@@ -169,7 +175,7 @@ def predict_pv():
 
     # 지역 선택 및 클릭
     driver.find_element(By.ID, 'install_cap').clear()
-    driver.find_element(By.ID, 'install_cap').send_keys(0.25)
+    driver.find_element(By.ID, 'install_cap').send_keys(pv_capasity)
     driver.find_element(By.ID, 'txtLat').send_keys(34.982)
     driver.find_element(By.ID, 'txtLon').send_keys(126.690)
     driver.find_element(By.ID, 'search_btn').click()
@@ -181,27 +187,28 @@ def predict_pv():
     # BeautifulSoup 객체 생성
     soup = BeautifulSoup(html, 'html.parser')
 
-    pred_pv = pd.DataFrame(columns=['time', 'pv'])
+    pred_pv = pd.DataFrame(columns=['date', 'pv'])
     sunlight = driver.find_element(By.ID, 'toEnergy').text
     hour = sunlight.split('\n')
 
     i = 0
     for x in hour:
         energy = x.split(' ')
+        strtime = datetime.datetime.strptime(now_date+" "+re.sub('[^A-Za-z0-9]', '', energy[0]), '%Y-%m-%d %H')
         # 특정 시간대 값이 누락 되었을 때
         if energy[1] == '-':
-            pred_pv.loc[i] = [now_date+" "+re.sub('[^A-Za-z0-9]', '', energy[0]), energy[1]]
+            pred_pv.loc[i] = [strtime, energy[1]]
         else:
-            pred_pv.loc[i] = [now_date+" "+re.sub('[^A-Za-z0-9]', '', energy[0]), float(energy[1]) * 1000]
+            pred_pv.loc[i] = [strtime, float(energy[1]) * 1000]
         i += 1
-
+    pred_pv.to_csv('pred_pv.csv')
     return pred_pv
 
 def data_preprocessing():
     pv = predict_pv()
     load = predict_load()
 
-    return None
+    return
 
 def calculate_pf(limit=None, time=None, pf=None):
     pv = predict_pv()
@@ -224,9 +231,14 @@ def calculate_pf(limit=None, time=None, pf=None):
 def optimize_mode():
     pv = predict_pv()
     load = predict_load()
-    print("optimize_mode")
+    pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H')
+    load['date'] = pd.to_datetime(load['date'], format='%Y-%m-%d %H')
+    #predWL = load['date'].loc[now_time+':00:00']
+    predWPV = pv.loc[pv['date']==now_time, 'pv']
+
     print(pv)
     print(load)
+    print(predWPV)
     return 13.1
 
 def peak_mode(limit):
