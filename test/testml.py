@@ -8,7 +8,7 @@ import tensorflow as tf
 
 start_time = time.time()
 # 데이터 로드, 여기서는 'df'라는 이름의 데이터프레임을 가정합니다.
-df = pd.read_csv('load6_2020.csv')
+df = pd.read_csv('../load6_2020.csv')
 
 
 print(df)
@@ -68,7 +68,7 @@ testPredict = scaler.inverse_transform(testPredict)
 import matplotlib.pyplot as plt
 
 # 실제 데이터 로드
-df_actual = pd.read_csv('load1_2021.csv')
+df_actual = pd.read_csv('../load1_2021.csv')
 
 # '날짜'를 datetime으로 변환하고 인덱스로 설정
 df_actual['date'] = pd.to_datetime(df_actual['date'])

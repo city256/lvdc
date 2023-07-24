@@ -59,6 +59,7 @@ def msg_handler(msg):
             # msg type 별 처리
             if (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 1): # 최적모드
                 pf = ml.optimize_mode()
+                print('pf = ', pf)
                 pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 2): # 피크제어

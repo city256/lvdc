@@ -1,7 +1,7 @@
 import db
-import datetime
 import mqtt_fn
 import config as cfg
+import datetime
 import time
 from selenium import webdriver
 from bs4 import BeautifulSoup
@@ -13,7 +13,6 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 import tensorflow as tf
 import re
-import matplotlib.pyplot as plt
 
 # 기상청 태양광발전량 예측
 url = 'http://bd.kma.go.kr/kma2020/fs/energySelect2.do?menuCd=F050702000'
@@ -21,8 +20,8 @@ pv_capasity = 0.25 # (mW) 0.25 = 250kW
 
 now = datetime.datetime.now()
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
-now_hour = datetime.datetime.now().strftime('%H:%M:%S')
-now_time = datetime.datetime.now().strftime('%Y-%m-%d %H')
+now_hour = datetime.datetime.now().strftime('%Y-%m-%d %H')
+
 
 def create_dataset(dataset, look_back=1):
     dataX, dataY = [], []
@@ -229,27 +228,73 @@ def calculate_pf(limit=None, time=None, pf=None):
     return pf
 
 def optimize_mode():
-    pv = predict_pv()
-    load = predict_load()
-    pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H')
-    load['date'] = pd.to_datetime(load['date'], format='%Y-%m-%d %H')
-    #predWL = load['date'].loc[now_time+':00:00']
-    predWPV = float(pv.loc[pv['date']==now_time, 'pv'])
+    #pv = predict_pv()
+    #load = predict_load()
+    #pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H')
+    #load['date'] = pd.to_datetime(load['date'], format='%Y-%m-%d %H')
+    #predWL = load['date'].loc[now_hour+':00:00']
+    #predWPV = float(pv.loc[pv['date'] == now_hour, 'pv'])
+    predWPV = 130
+    predWL = 394.8
+    soc = 14.6
+    wsoc = cfg.ess_capacity * (soc * 0.01)
+    wcnd = predWL - predWPV
+    print(wcnd, wsoc)
 
-
-    print(pv)
-    print(load)
-    print(predWPV)
-    return 13.1
+    if wcnd > 0: # 방전
+        if wsoc >= cfg.min_capacity:
+            if cfg.min_capacity < wsoc + wcnd:
+                return wsoc - cfg.min_capacity
+            else:
+                if wcnd >= cfg.conv_capacity_1h:
+                    return cfg.conv_capacity_1h
+                else:
+                    return wcnd
+        else:
+            return 0
+    elif wcnd < 0:   # 충전
+        if cfg.max_capacity < wsoc + wcnd:
+            return cfg.max_capacity - wsoc
+        else:
+            if wcnd <= -cfg.conv_capacity_1h:
+                return -cfg.conv_capacity_1h
+            else:
+                return wcnd
+    else:  # 대기
+        return 0
 
 def peak_mode(limit):
-    pv = predict_pv()
-    load = predict_load()
-    print(f'peak_mode, limit= {limit}')
-    return 13.2
+    predWPV = 130
+    predWL = 394.8
+    soc = 30.6
+    wsoc = cfg.ess_capacity * (soc * 0.01)
+    wcnd = predWL - predWPV
+
+    if 8 < int(datetime.datetime.hour) and int(datetime.datetime.hour) > 22:
+        if cfg.max_capacity < wsoc + wcnd:
+            return cfg.max_capacity - wsoc
+        else:
+            return cfg.conv_capacity_1h
+    else:
+        if wcnd > limit:
+            if wsoc >= cfg.min_capacity:
+                if cfg.min_capacity > wsoc + wcnd:
+                    return wsoc - cfg.min_capacity
+                else:
+                    return wcnd - limit
+            else:
+                return 0
+        else:
+            return 0
+
 def demand_mode():
-    pv = predict_pv()
-    load = predict_load()
+    predWPV = predict_pv()
+    predWL = predict_load()
+
+    wsoc = 30  # 현재 soc양 pms에 요청
+    wcnd = predWL - predWPV
+
+
     print("demand_mode")
     return 13.3
 

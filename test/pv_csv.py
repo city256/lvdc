@@ -6,7 +6,7 @@ import csv
 import re
 import matplotlib.pyplot as plt
 
-dataset = pd.read_csv('pv_data_2021.csv', encoding='CP949')
+dataset = pd.read_csv('../pv_data_2021.csv', encoding='CP949')
 data = pd.DataFrame()
 hour =[0]*24
 
