@@ -1,5 +1,4 @@
 import pandas as pd
-# import mariadb
 import sys
 import pymysql
 import datetime
@@ -11,9 +10,6 @@ db_name = "etri_lvdc"
 db_port = 13306
 url = 'lvdc.iptime.org'
 
-now = datetime.datetime.now()
-now_date = datetime.datetime.now().strftime('%Y-%m-%d')
-now_hour = datetime.datetime.now().strftime('%H:%M:%S')
 
 pv_colum = ['id', 'date', 'date', 'date', 'gcur', 'gmos1', 'gmos2', 'gpower', 'gvolt',
                                           'h1', 'h2', 'op', 'day', 'pvcur', 'pvmos1', 'pvmos2', 'pvnum', 'pvop',
@@ -37,13 +33,37 @@ def conn_db():
         sys.exit(1)
     return conn
 
-def get_pv_monitor(past, now):
+def dbdbdbfuck():
+    conn = conn_db()
+    result = pd.DataFrame(columns=['date','load'])
+    cur = conn.cursor()
+    query = 'SELECT * FROM test WHERE date BETWEEN DATE_ADD(NOW(), INTERVAL -6 MONTH) AND NOW();'
+    cur.execute(query)
+    print(query)
+    resultset = cur.fetchall()
+
+    # load는 DC 주택, DC 빌딩, AC 주택 3가지 부하량의 합
+    # select interlink, dcdc, dchome from pqm_monitoring where past and now_date
+    # select interlink, dcdc, dchome from pqm_monitoring where collected_date < date_add(now(), interval -60 day)
+    i = 0
+    for date, load in resultset:
+        data = [date, load]
+        result.loc[i] = data
+        i += 1
+
+    conn.commit()
+    conn.close()
+    return result
+
+
+print(dbdbdbfuck())
+def get_pv_monitor(past):
     conn = conn_db()
     result = pd.DataFrame(columns=pv_colum)
     cur = conn.cursor()
     # query = "SELECT * from pv_converter_monitoring"
     # past 부터 now 까지의 데이터 쿼리
-    query = f'select * from pv_converter_monitoring where collected_date between \'{past}\' and \'{now}\' '
+    query = f'select * from pv_converter_monitoring where collected_date between \'{past}\' and NOW() '
 
     cur.execute(query)
     resultset = cur.fetchall()
@@ -98,8 +118,5 @@ def get_ess_monitor():
     conn.commit()
     conn.close()
     return result
-
-
-
 
 

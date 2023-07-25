@@ -1,3 +1,5 @@
+import datetime
+
 # mqtt config
 url = 'lvdc.iptime.org'
 sub_topic = 'lvdc/ais'
@@ -11,6 +13,11 @@ db_user = "root"
 db_pw = "Lvdc12341@"
 db_name = "etri_lvdc"
 db_port = 13306
+
+# time
+now = datetime.datetime.now()
+now_date = datetime.datetime.now().strftime('%Y-%m-%d')
+now_hour = datetime.datetime.now().strftime('%Y-%m-%d %H')
 
 # microgrid spec
 ess_capacity = 1000

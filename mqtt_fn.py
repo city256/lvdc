@@ -1,6 +1,6 @@
 import paho.mqtt.client as mqtt
 import config as cfg
-import ml
+import operation_mode
 from datetime import datetime
 import json
 
