@@ -1,4 +1,4 @@
-import db
+import db_fn
 import mqtt_fn
 import config as cfg
 import datetime
@@ -22,11 +22,10 @@ now = datetime.datetime.now()
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
 now_hour = datetime.datetime.now().strftime('%Y-%m-%d %H')
 
-
 def create_dataset(dataset, look_back=1):
     dataX, dataY = [], []
-    for i in range(len(dataset) - look_back - 1):
-        a = dataset[i:(i + look_back), 0]
+    for i in range(len(dataset)-look_back-1):
+        a = dataset[i:(i+look_back), 0]
         dataX.append(a)
         dataY.append(dataset[i + look_back, 0])
     return np.array(dataX), np.array(dataY)
@@ -34,10 +33,7 @@ def create_dataset(dataset, look_back=1):
 def predict_load():
     start_time = time.time()
     # 데이터 로드, 여기서는 'df'라는 이름의 데이터프레임을 가정합니다.
-    df = pd.read_csv('load6_2020.csv')
-
-    # '날짜'를 datetime으로 변환하고 인덱스로 설정
-    df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d')
+    df = db_fn.get_test()
     df = df.set_index('date')
 
     # 데이터 정규화
@@ -68,9 +64,8 @@ def predict_load():
     # 모델 컴파일
     model.compile(loss='mean_squared_error', optimizer='adam')
 
-    # 모델 훈련 (GPU 사용)
-    with tf.device("/device:GPU:0"):
-        model.fit(trainX, trainY, epochs=50, batch_size=12, verbose=1)
+    # 모델 훈련
+    model.fit(trainX, trainY, epochs=30, batch_size=30, verbose=1)
 
     # 테스트 데이터에 대한 예측값 생성
     testPredict = model.predict(testX)
@@ -78,26 +73,11 @@ def predict_load():
     # 예측값 스케일 역변환
     testPredict = scaler.inverse_transform(testPredict)
 
-    df_actual = pd.read_csv('load1_2021.csv')
-    # '날짜'를 datetime으로 변환하고 인덱스로 설정
-    df_actual['date'] = pd.to_datetime(df_actual['date'], format='%Y-%m-%d')
-    df_actual = df_actual.set_index('date')
-
-    # 실제 데이터 로드
-    df_actual = pd.read_csv('load1_2021.csv')
-
-    # '날짜'를 datetime으로 변환하고 인덱스로 설정
-    df_actual['date'] = pd.to_datetime(df_actual['date'])
-    df_actual = df_actual.set_index('date')
-
     # 예측하려는 날짜 설정
-    predict_until = pd.to_datetime('2021-01-07 23')
+    predict_until = pd.to_datetime('2023-07-30 00')
 
     # 예측값을 저장할 빈 리스트 생성
     predictions = []
-
-    # 예측 시간 생성
-    prediction_dates = pd.date_range(df.index[-1] + pd.Timedelta(hours=1), predict_until, freq='H')
 
     # 현재까지의 전체 데이터 사용
     current_data = np.copy(scaled_data)
@@ -119,40 +99,17 @@ def predict_load():
     # 예측값 스케일 역변환
     predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
 
-    # 예측값 pd 파일 생성
-    pred_load = pd.DataFrame()
+    # 예측 시간 생성
+    prediction_dates = pd.date_range(df.index[-1] + pd.Timedelta(hours=1), predict_until, freq='H')
 
-    for i in range(len(predictions)):
-        temp = pd.DataFrame(data=[[prediction_dates[i], round(predictions[i][0]*10,2)]], columns=['date', 'load'])
-        pred_load = pd.concat([pred_load, temp], ignore_index=True)
-
-    '''
-        error = []
-        # 날짜 설정
-        for i in range(24):
-            for j in range(1, 8):
-                date_to_show = pd.to_datetime('2021-01-' + str(j).zfill(2) + ' ' + str(i).zfill(2))
-
-                # 해당 날짜의 실제 전력 사용량 출력
-                actual_power_usage = df_actual.loc[date_to_show, 'load']
-                #print(f'Actual power usage at {date_to_show}: {actual_power_usage}')
-
-                # 해당 날짜의 예측된 전력 사용량 출력
-                predicted_power_usage = predictions[prediction_dates.get_loc(date_to_show)]
-                #print(f'Predicted power usage at {date_to_show}: {round(predicted_power_usage[0], 2)}')
-
-                # 오차율 계산
-                error_rate = (abs(actual_power_usage - predicted_power_usage[0]) / actual_power_usage) * 100
-                error.append(error_rate)
-
-                # 오차율 출력
-                #print(f'Error rate at {date_to_show}: {error_rate:.2f}%')
-
-        print(f'average error rate : {np.mean(error):.2f}%')
-        print(f'Training Time : {time.time() - start_time}')
-    '''
+    # 예측 날짜와 전력 사용량을 데이터프레임으로 변환
+    pred_load = pd.DataFrame(data={
+        'date': prediction_dates,
+        'load': predictions.flatten()  # 2D array를 1D array로 변환
+    })
     pred_load.to_csv('pred_load.csv')
     return pred_load
+
 
 def predict_pv():
 
@@ -204,7 +161,4 @@ def update_csv():
     pv = predict_pv()
     load = predict_load()
 
-
-
     return None
-db.dbdbdbfuck()

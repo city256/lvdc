@@ -1,19 +1,12 @@
 import numpy as np
 import pandas as pd
-import time
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-import tensorflow as tf
+import db_fn
 
-start_time = time.time()
 # 데이터 로드, 여기서는 'df'라는 이름의 데이터프레임을 가정합니다.
-df = pd.read_csv('../load6_2020.csv')
-
-
-print(df)
-# '날짜'를 datetime으로 변환하고 인덱스로 설정
-df['date'] = pd.to_datetime(df['date'])
+df = db_fn.get_test()
 df = df.set_index('date')
 
 # 데이터 정규화
@@ -53,10 +46,8 @@ model.add(Dense(1))
 # 모델 컴파일
 model.compile(loss='mean_squared_error', optimizer='adam')
 
-# 모델 훈련 (GPU 사용)
-with tf.device("/device:GPU:0"):
-    model.fit(trainX, trainY, epochs=50, batch_size=12, verbose=2)
-
+# 모델 훈련
+model.fit(trainX, trainY, epochs=30, batch_size=30, verbose=1)
 
 # 테스트 데이터에 대한 예측값 생성
 testPredict = model.predict(testX)
@@ -64,24 +55,11 @@ testPredict = model.predict(testX)
 # 예측값 스케일 역변환
 testPredict = scaler.inverse_transform(testPredict)
 
-
-import matplotlib.pyplot as plt
-
-# 실제 데이터 로드
-df_actual = pd.read_csv('../load1_2021.csv')
-
-# '날짜'를 datetime으로 변환하고 인덱스로 설정
-df_actual['date'] = pd.to_datetime(df_actual['date'])
-df_actual = df_actual.set_index('date')
-
 # 예측하려는 날짜 설정
-predict_until = pd.to_datetime('2021-01-07 23')
+predict_until = pd.to_datetime('2023-07-30 00')
 
 # 예측값을 저장할 빈 리스트 생성
 predictions = []
-
-# 예측 시간 생성
-prediction_dates = pd.date_range(df.index[-1] + pd.Timedelta(hours=1), predict_until, freq='H')
 
 # 현재까지의 전체 데이터 사용
 current_data = np.copy(scaled_data)
@@ -103,18 +81,13 @@ while len(predictions) < (predict_until - df.index[-1]).total_seconds() / 3600:
 # 예측값 스케일 역변환
 predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
 
-# 예측값 pd 파일 생성
-pred_load = pd.DataFrame()
+# 예측 시간 생성
+prediction_dates = pd.date_range(df.index[-1] + pd.Timedelta(hours=1), predict_until, freq='H')
 
-for i in range(len(predictions)):
-    temp = pd.DataFrame(data=[[prediction_dates[i],predictions[i][0]]], columns=['date', 'load'])
-    pred_load = pd.concat([pred_load, temp], ignore_index=True)
+# 예측 날짜와 전력 사용량을 데이터프레임으로 변환
+prediction_df = pd.DataFrame(data={
+    'date': prediction_dates,
+    'load': predictions.flatten()  # 2D array를 1D array로 변환
+})
 
-print(predictions)
-print(prediction_dates[0])
-print(type(predictions), len(predictions))
-print(type(prediction_dates))
-print(pred_load)
-
-print(f'Training Time : {time.time() - start_time}')
-#plt.show()
+print(prediction_df)
