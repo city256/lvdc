@@ -17,7 +17,8 @@ db_port = 13306
 # time
 now = datetime.datetime.now()
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
-now_hour = datetime.datetime.now().strftime('%Y-%m-%d %H')
+now_hour = datetime.datetime.now().strftime('%Y-%m-%d %H:00:00')
+
 
 # microgrid spec
 ess_capacity = 1000

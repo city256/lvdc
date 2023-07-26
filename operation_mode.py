@@ -1,20 +1,21 @@
-import db_fn
-import mqtt_fn
 import config as cfg
 import datetime
 import pandas as pd
-import csv
 
 
 def optimize_mode():
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
 
-    predWPV = float(pv['pv'][datetime.datetime.now().hour])
-    predWL = 394.8
+    date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
+
+    predWL = float(load.loc[(load['date'] == date_str), 'load'])
+    predWPV = float(pv.loc[cfg.now.hour]['pv'])
+
     soc = 14.6
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWL - predWPV
+
     print(wcnd, wsoc)
 
     if wcnd > 0: # 방전
@@ -40,8 +41,14 @@ def optimize_mode():
         return 0
 
 def peak_mode(limit):
-    predWPV = 130
-    predWL = 394.8
+    pv = pd.read_csv('pred_pv.csv')
+    load = pd.read_csv('pred_load.csv')
+
+    date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
+
+    predWL = float(load.loc[(load['date'] == date_str), 'load'])
+    predWPV = float(pv.loc[cfg.now.hour]['pv'])
+
     soc = 30.6
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWL - predWPV
@@ -64,13 +71,25 @@ def peak_mode(limit):
             return 0
 
 def demand_mode():
+    pv = pd.read_csv('pred_pv.csv')
+    load = pd.read_csv('pred_load.csv')
 
+    date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
 
-    print("demand_mode")
+    predWL = float(load.loc[(load['date'] == date_str), 'load'])
+    predWPV = float(pv.loc[cfg.now.hour]['pv'])
+
+    print("demand_mode", predWL, predWPV)
     return 13.3
 
 def pv_mode():
+    pv = pd.read_csv('pred_pv.csv')
+    load = pd.read_csv('pred_load.csv')
 
+    date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
 
-    print("pv_mode")
+    predWL = float(load.loc[(load['date'] == date_str), 'load'])
+    predWPV = float(pv.loc[cfg.now.hour]['pv'])
+
+    print("pv_mode", predWL, predWPV)
     return 13.4

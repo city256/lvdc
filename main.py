@@ -17,7 +17,11 @@ if __name__ == '__main__':
     # 주기적으로 예측 데이터 업데이트
     schedule.every().hour.at("00:30").do(dc.update_csv)
 
+    init = 0
     while True:
+        if init==0:
+            dc.update_csv()
+            init+=1
         schedule.run_pending()
         time.sleep(1)
 
