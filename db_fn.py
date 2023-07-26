@@ -1,14 +1,7 @@
 import pandas as pd
 import sys
 import pymysql
-import datetime
-
-# maria db config
-db_user = "root"
-db_pw = "Lvdc12341@"
-db_name = "etri_lvdc"
-db_port = 13306
-url = 'lvdc.iptime.org'
+import config as cfg
 
 
 pv_colum = ['id', 'date', 'date', 'date', 'gcur', 'gmos1', 'gmos2', 'gpower', 'gvolt',
@@ -21,11 +14,11 @@ pqms_colum = ['date', 'time_index','acdc','pv','essCharge','essDischarge','dcHom
 def conn_db():
     try:
         conn = pymysql.connect(
-            user=db_user,
-            password=db_pw,
-            host=url,
-            port=db_port,
-            db=db_name
+            user=cfg.db_user,
+            password=cfg.db_pw,
+            host=cfg.broker_url,
+            port=cfg.db_port,
+            db=cfg.db_name
         )
         print("connection Success!")
     except pymysql.Error as e:
@@ -45,7 +38,6 @@ def get_test():
     conn.close()
     return result
 
-get_test()
 def get_pv_monitor(past):
     conn = conn_db()
     cur = conn.cursor()

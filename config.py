@@ -1,7 +1,7 @@
 import datetime
 
 # mqtt config
-url = 'lvdc.iptime.org'
+broker_url = 'lvdc.iptime.org'
 sub_topic = 'lvdc/ais'
 pub_pms_topic = 'lvdc/pms'
 pub_ems_topic = 'lvdc/ems/pms'

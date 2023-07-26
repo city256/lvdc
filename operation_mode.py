@@ -2,19 +2,15 @@ import db_fn
 import mqtt_fn
 import config as cfg
 import datetime
-import time
-import data_collecter as dc
+import pandas as pd
+import csv
+
 
 def optimize_mode():
-    # pv = dc.predict_pv()
-    # load = dc.predict_load()
+    pv = pd.read_csv('pred_pv.csv')
+    load = pd.read_csv('pred_load.csv')
 
-    # 특정 시간대 값을 불러옴
-    # pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H')
-    # load['date'] = pd.to_datetime(load['date'], format='%Y-%m-%d %H')
-    # predWL = load['date'].loc[now_hour+':00:00']
-    # predWPV = float(pv.loc[pv['date'] == now_hour, 'pv'])
-    predWPV = 130
+    predWPV = float(pv['pv'][datetime.datetime.now().hour])
     predWL = 394.8
     soc = 14.6
     wsoc = cfg.ess_capacity * (soc * 0.01)
@@ -68,18 +64,13 @@ def peak_mode(limit):
             return 0
 
 def demand_mode():
-    predWPV = dc.predict_pv()
-    predWL = dc.predict_load()
-
-    wsoc = 30  # 현재 soc양 pms에 요청
-    wcnd = predWL - predWPV
 
 
     print("demand_mode")
     return 13.3
 
 def pv_mode():
-    pv = dc.predict_pv()
-    load = dc.predict_load()
+
+
     print("pv_mode")
     return 13.4

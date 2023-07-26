@@ -48,43 +48,43 @@ def msg_handler(msg):
         msg_str=msg_str[4:]
         split_msg = msg_str.split("&")
         recv_index = int(split_msg[0].split('=')[1]) # p_index value
-        operation_mode = int(split_msg[1].split('=')[1]) # type value
+        mode = int(split_msg[1].split('=')[1]) # type value
 
         # p_index 처리
         if (split_msg[0].split('=')[0] == 'p_index' or p_index < recv_index):
             p_index = recv_index
 
-            print(f'p_index = {recv_index}, operation_mode = {operation_mode}')
+            print(f'p_index = {recv_index}, operation_mode = {mode}')
             # set msg 예) set?p_index=2&type=1&limit=21.5
             # msg type 별 처리
-            if (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 1): # 최적모드
-                pf = ml.optimize_mode()
+            if (split_msg[1].split('=')[0]=='operation_mode' and mode == 1): # 최적모드
+                pf = operation_mode.optimize_mode()
                 print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
-            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 2): # 피크제어
+            elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 2): # 피크제어
                 limit = float(split_msg[2].split('=')[1])
-                pf = ml.peak_mode(limit)
-                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
+                pf = operation_mode.peak_mode(limit)
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
-            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 3): # 수요관리
-                pf = ml.demand_mode()
-                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
+            elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 3): # 수요관리
+                pf = operation_mode.demand_mode()
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
-            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 4): # 태양광연계
-                pf = ml.pv_mode()
-                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
+            elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 4): # 태양광연계
+                pf = operation_mode.pv_mode()
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
-            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 5): # 수동제어
+            elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 5): # 수동제어
                 pf = float(split_msg[2].split('=')[1])
-                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}&power_reference={pf}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
                 print(f'passive, power_reference={pf}')
-            elif (split_msg[1].split('=')[0]=='operation_mode' and operation_mode == 6): # 독립모드
-                pub_msg = f'set?p_index={p_index}&operation_mode={operation_mode}'
+            elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 6): # 독립모드
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_state'): # 동작 제어
-                pub_msg = f'set?p_index={p_index}&operation_state={operation_mode}'
+                pub_msg = f'set?p_index={p_index}&operation_state={mode}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             else:
                 print("Unknown operation_mode msg")

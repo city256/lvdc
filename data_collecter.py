@@ -1,6 +1,5 @@
+import threading
 import db_fn
-import mqtt_fn
-import config as cfg
 import datetime
 import time
 from selenium import webdriver
@@ -11,7 +10,6 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-import tensorflow as tf
 import re
 
 # 기상청 태양광발전량 예측
@@ -31,6 +29,8 @@ def create_dataset(dataset, look_back=1):
     return np.array(dataX), np.array(dataY)
 
 def predict_load():
+    print('entering load')
+
     start_time = time.time()
     # 데이터 로드, 여기서는 'df'라는 이름의 데이터프레임을 가정합니다.
     df = db_fn.get_test()
@@ -108,11 +108,13 @@ def predict_load():
         'load': predictions.flatten()  # 2D array를 1D array로 변환
     })
     pred_load.to_csv('pred_load.csv')
-    return pred_load
+    print('load done : ',time.time() - start_time)
+    pass
 
 
 def predict_pv():
-
+    start = time.time()
+    print('entering pv')
     # 크롬창 백그라운드 실행
     option = webdriver.ChromeOptions()
     option.add_argument('headless')
@@ -154,11 +156,18 @@ def predict_pv():
             pred_pv.loc[i] = [strtime, float(energy[1]) * 1000]
         i += 1
     pred_pv.to_csv('pred_pv.csv')
-    return pred_pv
+    print('pv done : ', time.time() - start)
+    pass
 
 
 def update_csv():
-    pv = predict_pv()
-    load = predict_load()
+    load_proc = threading.Thread(target=predict_load)
+    pv_proc = threading.Thread(target=predict_pv)
 
-    return None
+    load_proc.start()
+    pv_proc.start()
+
+    load_proc.join()
+    pv_proc.join()
+    pass
+
