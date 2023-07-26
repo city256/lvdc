@@ -2,6 +2,8 @@ import config as cfg
 import datetime
 import pandas as pd
 
+import mqtt_fn
+
 
 def optimize_mode():
     pv = pd.read_csv('pred_pv.csv')
@@ -12,7 +14,11 @@ def optimize_mode():
     predWL = float(load.loc[(load['date'] == date_str), 'load'])
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
-    soc = 14.6
+    pub_msg = f'get?p_index={mqtt_fn.pms_index}&soc_report'
+    mqtt_fn.mqttc.publish(cfg.pub_pms_topic, pub_msg)
+
+    #soc = 14.6
+    soc = cfg.soc_index[mqtt_fn.pms_index]
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWL - predWPV
 

@@ -33,6 +33,10 @@ def on_publish(client, obj, mid):
 def on_subscribe(client, obj, mid, granted_qos):
     print("Subscribe Complete : " + str(mid) + " " + str(granted_qos))
 
+def get_soc_report():
+    pub_msg = f'get?p_index={pms_index}&soc_report'
+    mqttc.publish(cfg.pub_pms_topic, pub_msg)
+
 # mqtt subscribe 메시지 처리
 def msg_handler(msg):
     msg_str = str(msg)[2:-1] # payload 문자열처리
@@ -103,6 +107,7 @@ def msg_handler(msg):
     # pms get response 처리
     elif (msg_json['p_type'] == 'get' and msg_json['p_cmd'] == 'response/soc_report'):
         print(f'get Response Msg= {msg_json}')
+        cfg.soc_index[msg_json['p_index']] = msg_json['contents']
     else:
         print(f'Unknown Msg= {msg_str}')
 

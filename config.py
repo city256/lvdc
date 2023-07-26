@@ -19,6 +19,8 @@ now = datetime.datetime.now()
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
 now_hour = datetime.datetime.now().strftime('%Y-%m-%d %H:00:00')
 
+# index
+soc_index = {}
 
 # microgrid spec
 ess_capacity = 1000
