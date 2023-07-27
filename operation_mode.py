@@ -1,7 +1,7 @@
 import config as cfg
 import datetime
 import pandas as pd
-
+import random
 import mqtt_fn
 
 
@@ -11,14 +11,13 @@ def optimize_mode():
 
     date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
 
+
     predWL = float(load.loc[(load['date'] == date_str), 'load'])
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
-    pub_msg = f'get?p_index={mqtt_fn.pms_index}&soc_report'
-    mqtt_fn.mqttc.publish(cfg.pub_pms_topic, pub_msg)
+    # soc = cfg.soc_index[mqtt_fn.pms_index]
+    soc = round(random.uniform(11, 90), 1)
 
-    #soc = 14.6
-    soc = cfg.soc_index[mqtt_fn.pms_index]
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWL - predWPV
 
@@ -55,7 +54,7 @@ def peak_mode(limit):
     predWL = float(load.loc[(load['date'] == date_str), 'load'])
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
-    soc = 30.6
+    soc = round(random.uniform(11, 90), 1)
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWL - predWPV
 

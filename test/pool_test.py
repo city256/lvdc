@@ -1,14 +1,18 @@
+import time
 import pandas as pd
 import config as cfg
 import datetime
+import mqtt_fn
 
-pv = pd.read_csv('../pred_pv.csv')
-load = pd.read_csv('../pred_load.csv')
 
-date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
+cfg.soc_index['231'] = 341.13
+predict_until = pd.to_datetime(cfg.now_hour) + datetime.timedelta(days=7)
+# pub_msg = f'get?p_index={mqtt_fn.pms_index}&soc_report'
+# mqtt_fn.mqttc.publish(cfg.pub_pms_topic, pub_msg)
+print(predict_until)
 
-predWL = float(load.loc[(load['date'] == date_str), 'load'])
-predWPV = float(pv.loc[cfg.now.hour]['pv'])
+print(cfg.soc_index['231'])
 
-print(predWL)
-print(predWPV)
+
+#soc = 14.6
+#soc = cfg.soc_index[mqtt_fn.pms_index]

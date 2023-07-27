@@ -15,10 +15,9 @@ import re
 # 기상청 태양광발전량 예측
 url = 'http://bd.kma.go.kr/kma2020/fs/energySelect2.do?menuCd=F050702000'
 pv_capasity = 0.25 # (mW) 0.25 = 250kW
-
-now = datetime.datetime.now()
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
 now_hour = datetime.datetime.now().strftime('%Y-%m-%d %H')
+predict_range = 1 # days
 
 def create_dataset(dataset, look_back=1):
     dataX, dataY = [], []
@@ -65,7 +64,7 @@ def predict_load():
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     # 모델 훈련
-    model.fit(trainX, trainY, epochs=30, batch_size=30, verbose=1)
+    model.fit(trainX, trainY, epochs=50, batch_size=30, verbose=0)
 
     # 테스트 데이터에 대한 예측값 생성
     testPredict = model.predict(testX)
@@ -74,7 +73,7 @@ def predict_load():
     testPredict = scaler.inverse_transform(testPredict)
 
     # 예측하려는 날짜 설정
-    predict_until = pd.to_datetime('2023-07-30 00')
+    predict_until = pd.to_datetime(now_hour) + datetime.timedelta(days=predict_range)
 
     # 예측값을 저장할 빈 리스트 생성
     predictions = []
@@ -171,3 +170,4 @@ def update_csv():
     pv_proc.join()
     pass
 
+update_csv()

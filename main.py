@@ -17,12 +17,12 @@ if __name__ == '__main__':
     # 주기적으로 예측 데이터 업데이트
     schedule.every().hour.at("00:30").do(dc.update_csv)
 
-    init = 0
+    # init : 프로그램 시작시 예측 돌리는 변수 (0: 시작시 예측 / 1: 시작시 예측 안함)
+    init = 1
+    # 스케쥴링 루프문
     while True:
         if init==0:
             dc.update_csv()
             init+=1
         schedule.run_pending()
         time.sleep(1)
-
-
