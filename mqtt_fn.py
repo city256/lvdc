@@ -52,7 +52,7 @@ def msg_handler(msg):
         split_msg = msg_str.split("&")
         recv_index = int(split_msg[0].split('=')[1]) # p_index value
         mode = int(split_msg[1].split('=')[1]) # type value
-        print('get_soc_report send')
+        # print('get_soc_report send')
         # p_index 처리
         if (split_msg[0].split('=')[0] == 'p_index' or p_index < recv_index):
             p_index = recv_index
@@ -66,14 +66,17 @@ def msg_handler(msg):
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 2): # 피크제어
                 limit = float(split_msg[2].split('=')[1])
                 pf = operation_mode.peak_mode(limit)
+                print('pf = ', pf)
                 pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 3): # 수요관리
                 pf = operation_mode.demand_mode()
+                print('pf = ', pf)
                 pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 4): # 태양광연계
                 pf = operation_mode.pv_mode()
+                print('pf = ', pf)
                 pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 5): # 수동제어
