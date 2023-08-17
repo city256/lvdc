@@ -150,7 +150,7 @@ def predict_pv():
         strtime = datetime.datetime.strptime(now_date+" "+re.sub('[^A-Za-z0-9]', '', energy[0]), '%Y-%m-%d %H')
         # 특정 시간대 값이 누락 되었을 때
         if energy[1] == '-':
-            pred_pv.loc[i] = [strtime, energy[1]]
+            pred_pv.loc[i] = [strtime, 0]
         else:
             pred_pv.loc[i] = [strtime, float(energy[1]) * 1000]
         i += 1

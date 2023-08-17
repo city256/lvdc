@@ -39,8 +39,12 @@ def get_soc_report():
 # mqtt subscribe 메시지 처리
 def msg_handler(msg):
     msg_str = str(msg)[2:-1] # payload 문자열처리
+    msg_str = msg_str.replace("\\r", "") # 개행문자 처리
+    msg_str = msg_str.replace("\\n", "")
+    msg_str = msg_str.replace("\\t", "")
+
     try:
-        msg_json = json.loads(msg_str) # payload json 처리
+        msg_json = json.loads(msg_str, strict=False) # payload json 처리
         print("json msg received")
     except json.JSONDecodeError as e:
         print(f"msg not json format: {e}")
