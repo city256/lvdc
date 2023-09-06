@@ -3,6 +3,7 @@ import datetime
 import pandas as pd
 import random
 import mqtt_fn
+import db_fn
 
 def optimize_mode():
     pv = pd.read_csv('pred_pv.csv')
@@ -14,7 +15,7 @@ def optimize_mode():
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
     # soc = cfg.soc_index[mqtt_fn.pms_index]
-    soc = round(random.uniform(11, 90), 1)
+    soc = db_fn.get_pms_soc()
 
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
@@ -58,7 +59,7 @@ def peak_mode(limit):
     predWL = float(load.loc[(load['date'] == date_str), 'load'])
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
-    soc = round(random.uniform(11, 90), 1)
+    soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
     hour = datetime.datetime.now().hour
@@ -102,7 +103,7 @@ def demand_mode():
     predWL = float(load.loc[(load['date'] == date_str), 'load'])
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
-    soc = round(random.uniform(11, 90), 1)
+    soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
     hour = datetime.datetime.now().hour
@@ -141,7 +142,7 @@ def pv_mode():
     predWL = float(load.loc[(load['date'] == date_str), 'load'])
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
-    soc = round(random.uniform(11, 90), 1)
+    soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
     hour = datetime.datetime.now().hour

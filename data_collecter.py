@@ -33,7 +33,19 @@ def predict_load():
     start_time = time.time()
     # 데이터 로드, 여기서는 'df'라는 이름의 데이터프레임을 가정합니다.
     df = db_fn.get_test()
+    df2 = db_fn.get_pqms_data()
+    test = pd.DataFrame(data={
+        'date': df2['date'],
+        'load': df2['load']  # 2D array를 1D array로 변환
+    })
+    print(df, type(df))
+    print(len(df), df.shape[0], df.shape[1], df.count())
+    print(df2, type(df2))
+    print(len(df2), df2.shape[0], df2.shape[1], df2.count())
+    print(test, type(test))
+
     df = df.set_index('date')
+
 
     # 데이터 정규화
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -169,5 +181,3 @@ def update_csv():
     load_proc.join()
     pv_proc.join()
     pass
-
-update_csv()

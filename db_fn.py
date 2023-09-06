@@ -8,7 +8,8 @@ pv_colum = ['id', 'date', 'date', 'date', 'gcur', 'gmos1', 'gmos2', 'gpower', 'g
                                           'h1', 'h2', 'op', 'day', 'pvcur', 'pvmos1', 'pvmos2', 'pvnum', 'pvop',
                                           'pvpower', 'pvvolt', 's1', 's2', 'devid']
 ess_colum = ['id', 'created_date', 'modified_date', 'charging_capacity', 'charging_status', 'collected_date' ,'device_status',	'discharge_capacity',	'ess_current',	'ess_power',	'ess_power_available',	'ess_voltage',	'grid_connectivity',	'grid_current,'	'grid_power',	'grid_voltage','internal_connectivity',	'max_soc',	'min_soc',	'negative_electrolyte_temperature,'	'number_of_abnormal_stack',	'number_of_normal_stack',	'operating_pump',	'operation_state',	'positive_electrolyte_temperature',	'pump_speed',	'soc',	'temperature',	'voltage_current_mode',	'device_id']
-pqms_colum = ['date', 'time_index','acdc','pv','essCharge','essDischarge','dcHome','interlink']
+pqms_colum = ['id', 'create_date','modified_date','ac_dc','dcdc','dc_home','ess_charge','ess_discharge', 'interlink', 'load_date', 'p_error', 'p_id','p_info','p_time','p_type','pqms_index','pv','time_index']
+
 
 
 def conn_db():
@@ -20,7 +21,7 @@ def conn_db():
             port=cfg.db_port,
             db=cfg.db_name
         )
-        print("connection Success!")
+        print("DB connection Success!")
     except pymysql.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
         sys.exit(1)
@@ -29,7 +30,9 @@ def conn_db():
 def get_test():
     conn = conn_db()
     cur = conn.cursor()
-    query = 'SELECT * FROM test WHERE date BETWEEN DATE_ADD(NOW(), INTERVAL -6 MONTH) AND NOW();'
+    query = 'SELECT * FROM test WHERE date BETWEEN DATE_ADD(NOW(), INTERVAL -6 MONTH) AND NOW() ORDER BY date ASC LIMIT 500;'
+    #query = "SELECT current_soc from pms_converter_get ORDER BY id DESC LIMIT 6"
+
     cur.execute(query)
     resultset = cur.fetchall()
 
@@ -38,6 +41,42 @@ def get_test():
     conn.close()
     return result
 
+def get_pqms_data():
+    conn = conn_db()
+    cur = conn.cursor()
+    #query = 'SELECT * FROM pqms_load_min WHERE load_date BETWEEN DATE_ADD(NOW(), INTERVAL -1 MONTH) AND NOW();'
+    query = """
+    SELECT 
+        DATE_FORMAT(load_date - INTERVAL 15 MINUTE, '%Y-%m-%d %H:00:00') AS hour_start,
+        SUM(dcdc+interlink+dc_home) AS total_sum
+    FROM pqms_load_min
+    WHERE MINUTE(load_date) >= 13
+    GROUP BY hour_start
+    ORDER BY hour_start
+"""
+    cur.execute(query)
+    resultset = cur.fetchall()
+    result = pd.DataFrame(resultset, columns=['date', 'load'])
+
+
+    #result = pd.DataFrame(resultset, columns=pqms_colum)
+    conn.commit()
+    conn.close()
+    return result
+
+print(get_pqms_data())
+
+'''print(pqms_data['time_index'])
+print(len(pqms_data))
+i=0
+for i in range(len(pqms_data)):
+    if pqms_data['time_index'][i]%15==0:
+        index = pqms_data['time_index'][i]/15
+        if(index%4==0):
+            print(pqms_data['time_index'][i], index)
+            
+        #print(pqms_data.loc['time_index'][0], index)
+'''
 def get_pv_monitor(past):
     conn = conn_db()
     cur = conn.cursor()
@@ -49,18 +88,6 @@ def get_pv_monitor(past):
     resultset = cur.fetchall()
 
     result = pd.DataFrame(resultset, columns=pv_colum)
-    conn.commit()
-    conn.close()
-    return result
-
-def get_pqms_monitor():
-    conn = conn_db()
-    cur = conn.cursor()
-    query = "SELECT * from pqm_monitoring"
-    cur.execute(query)
-    resultset = cur.fetchall()
-
-    result = pd.DataFrame(resultset, columns=pqms_colum)
     conn.commit()
     conn.close()
     return result
@@ -79,3 +106,13 @@ def get_ess_monitor():
     return result
 
 
+def get_pms_soc():
+    conn = conn_db()
+    cur = conn.cursor()
+    query = "SELECT current_soc from pms_converter_get ORDER BY id DESC LIMIT 1"
+    cur.execute(query)
+    resultset = cur.fetchall()
+
+    conn.commit()
+    conn.close()
+    return resultset[0][0]
