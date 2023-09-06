@@ -11,7 +11,7 @@ def optimize_mode(soc):
 
     date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
 
-    predWL = float(round(load.loc[load['date'] == date_str, 'load'][0], 2))
+    predWL = float(load.loc[load['date'] == date_str, 'load'][0])
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
     # soc = cfg.soc_index[mqtt_fn.pms_index]
@@ -49,7 +49,7 @@ def optimize_mode(soc):
         return 0
 
 #print(f'optimize pref={optimize_mode(21.5)}')
-for i in range(89,99):
+for i in range(1,99):
     print(f'soc={i}, p_ref={optimize_mode(i)}')
 
 

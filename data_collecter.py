@@ -186,4 +186,4 @@ def update_csv():
     pass
 
 
-#update_csv()
+update_csv()
