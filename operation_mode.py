@@ -11,7 +11,7 @@ def optimize_mode(soc):
 
     date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
 
-    predWL = float(load.loc[load['date'] == date_str, 'load'][0])
+    predWL = float(round(load.loc[load['date'] == date_str, 'load'], 2))
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
     # soc = cfg.soc_index[mqtt_fn.pms_index]
@@ -20,37 +20,53 @@ def optimize_mode(soc):
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
 
-    print('predL: {}, predPV: {}, soc: {}'.format(predWL, predWPV, soc))
-    print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
+    #wcnd = -120
+    #print('predL: {}, predPV: {}, soc: {}'.format(predWL, predWPV, soc))
+    #print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
 
     if wcnd < 0: # 방전, 음수
-        if wsoc >= cfg.min_capacity:
+        if wsoc > cfg.min_capacity:  # wsoc가 10% 이상인지
             if cfg.min_capacity > wsoc + wcnd:  # soc 10% 미만 방지
-                if wcnd <= -cfg.conv_capacity_1h:  # 컨버터 용량 초과 방지
-                    return -(wsoc - cfg.min_capacity)
+                if wcnd <= -cfg.min_capacity:  # 컨버터 용량 초과 방지
+                    #print("wcnd+wsoc 10% 이상")
+                    return max(-(wsoc - cfg.min_capacity), -cfg.conv_capacity_1h)
                 else:
+                    #print("컨버터 용량 초과 방지")
                     return -cfg.conv_capacity_1h
             else:                                   # PF 값 선정
                 if wcnd <= -cfg.conv_capacity_1h:   # 컨버터 용량 초과 방지
+                    #print("컨버터 용량 초과 방지")
                     return -cfg.conv_capacity_1h
                 else:
+                    #print("정상 방전")
                     return wcnd
         else:   # 배터리 soc 10% 미만일 경우
+            # print("SoC 10% 미만")
             return 0
     elif wcnd > 0:   # 충전 양수
-        if cfg.max_capacity < wsoc + wcnd:   # soc 90% 초과 방지
-            return cfg.max_capacity - wsoc
-        else:
-            if wcnd >= cfg.conv_capacity_1h:   # 컨버터 용량 초과 방지
-                return cfg.conv_capacity_1h
+        if wsoc < cfg.max_capacity:   # soc 90% 미만
+            if cfg.max_capacity < wsoc + wcnd:  # soc 90% 초과 방지
+                # print("wcnd+wsoc 90%이상")
+                return min(cfg.max_capacity - wsoc, cfg.conv_capacity_1h)
             else:
-                return wcnd
-    else:  # 대기
+                if wcnd >= cfg.conv_capacity_1h:  # 컨버터 용량 초과 방지
+                    # print("컨버터 용량 초과 방지")
+                    return cfg.conv_capacity_1h
+                else:
+                    # print("정상 충전")
+                    return wcnd
+        else:    # 배터리 soc 90% 초과일 경우
+            # print("SoC 90% 초과")
+            return 0
+    else:  # 대기 cwnd = 0
+        # print("wcnd = 0 대기")
         return 0
 
 #print(f'optimize pref={optimize_mode(21.5)}')
-for i in range(1,99):
-    print(f'soc={i}, p_ref={optimize_mode(i)}')
+for i in range(1,98):
+    #print(f'soc={i}, p_ref={optimize_mode(i)}\n')
+    if(optimize_mode(i)<-250 or optimize_mode(i) > 250):
+        print(f'soc={i}, p_ref={optimize_mode(i)}\n')
 
 
 def peak_mode(limit):
