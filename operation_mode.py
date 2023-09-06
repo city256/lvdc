@@ -5,23 +5,22 @@ import random
 import mqtt_fn
 import db_fn
 
-def optimize_mode():
+def optimize_mode(soc):
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
 
     date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
 
-    predWL = float(load.loc[(load['date'] == date_str), 'load'])
+    predWL = float(round(load.loc[load['date'] == date_str, 'load'][0], 2))
     predWPV = float(pv.loc[cfg.now.hour]['pv'])
 
     # soc = cfg.soc_index[mqtt_fn.pms_index]
-    soc = db_fn.get_pms_soc()
+    #soc = db_fn.get_pms_soc()
 
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
 
-           # 1000 * (406 - 200) - 350)
-    print('predL: {}, predPV: {}'.format(predWL, predWPV))
+    print('predL: {}, predPV: {}, soc: {}'.format(predWL, predWPV, soc))
     print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
 
     if wcnd < 0: # 방전, 음수
@@ -49,7 +48,9 @@ def optimize_mode():
     else:  # 대기
         return 0
 
-
+#print(f'optimize pref={optimize_mode(21.5)}')
+for i in range(89,99):
+    print(f'soc={i}, p_ref={optimize_mode(i)}')
 
 
 def peak_mode(limit):

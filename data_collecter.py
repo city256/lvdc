@@ -32,9 +32,9 @@ def predict_load():
 
     start_time = time.time()
     # 데이터 로드, 여기서는 'df'라는 이름의 데이터프레임을 가정합니다.
-    df = db_fn.get_test()
-    df2 = db_fn.get_pqms_data()
-    test = pd.DataFrame(data={
+    #df = db_fn.get_test()
+
+    '''test = pd.DataFrame(data={
         'date': df2['date'],
         'load': df2['load']  # 2D array를 1D array로 변환
     })
@@ -42,9 +42,13 @@ def predict_load():
     print(len(df), df.shape[0], df.shape[1], df.count())
     print(df2, type(df2))
     print(len(df2), df2.shape[0], df2.shape[1], df2.count())
-    print(test, type(test))
+    print(test, type(test))'''
 
+    df = db_fn.get_pqms_data()
+    df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d %H:00:00')
     df = df.set_index('date')
+
+
 
 
     # 데이터 정규화
@@ -76,7 +80,7 @@ def predict_load():
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     # 모델 훈련
-    model.fit(trainX, trainY, epochs=50, batch_size=30, verbose=0)
+    model.fit(trainX, trainY, epochs=50, batch_size=30, verbose=1)
 
     # 테스트 데이터에 대한 예측값 생성
     testPredict = model.predict(testX)
@@ -170,7 +174,6 @@ def predict_pv():
     print('pv done : ', time.time() - start)
     pass
 
-
 def update_csv():
     load_proc = threading.Thread(target=predict_load)
     pv_proc = threading.Thread(target=predict_pv)
@@ -181,3 +184,6 @@ def update_csv():
     load_proc.join()
     pv_proc.join()
     pass
+
+
+#update_csv()

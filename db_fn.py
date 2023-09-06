@@ -44,7 +44,6 @@ def get_test():
 def get_pqms_data():
     conn = conn_db()
     cur = conn.cursor()
-    #query = 'SELECT * FROM pqms_load_min WHERE load_date BETWEEN DATE_ADD(NOW(), INTERVAL -1 MONTH) AND NOW();'
     query = """
     SELECT 
         DATE_FORMAT(load_date - INTERVAL 15 MINUTE, '%Y-%m-%d %H:00:00') AS hour_start,
@@ -64,7 +63,7 @@ def get_pqms_data():
     conn.close()
     return result
 
-print(get_pqms_data())
+#print(get_pqms_data())
 
 '''print(pqms_data['time_index'])
 print(len(pqms_data))
