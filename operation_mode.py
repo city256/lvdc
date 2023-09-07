@@ -1,8 +1,6 @@
 import config as cfg
 import datetime
 import pandas as pd
-import random
-import mqtt_fn
 import db_fn
 
 def optimize_mode(soc):
@@ -20,7 +18,7 @@ def optimize_mode(soc):
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
 
-    #wcnd = -120
+    wcnd = 314
     #print('predL: {}, predPV: {}, soc: {}'.format(predWL, predWPV, soc))
     #print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
 
@@ -65,8 +63,7 @@ def optimize_mode(soc):
 #print(f'optimize pref={optimize_mode(21.5)}')
 for i in range(1,98):
     #print(f'soc={i}, p_ref={optimize_mode(i)}\n')
-    if(optimize_mode(i)<-250 or optimize_mode(i) > 250):
-        print(f'soc={i}, p_ref={optimize_mode(i)}\n')
+    print(f'soc={i}, p_ref={optimize_mode(i)}')
 
 
 def peak_mode(limit):
