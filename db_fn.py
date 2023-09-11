@@ -132,6 +132,7 @@ def get_pv_dataset():
     weather.set_index('date')
     merge= pd.merge(weather, pv)
     print(merge)
+    return merge
 
 get_pv_dataset()
 
