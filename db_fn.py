@@ -45,16 +45,16 @@ def get_pqms_data():
     conn = conn_db()
     cur = conn.cursor()
     query = """
-SELECT 
-    CASE 
-        WHEN MINUTE(load_date) = 0 THEN DATE_FORMAT(DATE_SUB(load_date, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00')
-        ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
-    END AS target_hour,
-    SUM(dcdc) as total_value
-FROM pqms_load_min
-WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
-GROUP BY target_hour
-ORDER BY target_hour
+    SELECT 
+        CASE 
+            WHEN MINUTE(load_date) = 0 THEN DATE_FORMAT(DATE_SUB(load_date, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00')
+            ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
+        END AS target_hour,
+        SUM(dcdc + interlink + dc_home) as total_value
+    FROM pqms_load_min
+    WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
+    GROUP BY target_hour
+    ORDER BY target_hour
 """
     cur.execute(query)
     resultset = cur.fetchall()
