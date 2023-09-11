@@ -41,7 +41,7 @@ def get_test():
     conn.close()
     return result
 
-def get_pqms_data():
+def get_load_data():
     conn = conn_db()
     cur = conn.cursor()
     query = """
@@ -60,8 +60,6 @@ def get_pqms_data():
     resultset = cur.fetchall()
     result = pd.DataFrame(resultset, columns=['date', 'load'])
 
-
-    #result = pd.DataFrame(resultset, columns=pqms_colum)
     conn.commit()
     conn.close()
     return result
@@ -79,34 +77,63 @@ for i in range(len(pqms_data)):
             
         #print(pqms_data.loc['time_index'][0], index)
 '''
-def get_pv_monitor(past):
+def get_pv_data():
     conn = conn_db()
     cur = conn.cursor()
-
-    # past 부터 now 까지의 데이터 쿼리
-    query = f'select * from pv_converter_monitoring where collected_date between \'{past}\' and NOW() '
-
+    query = """
+    SELECT 
+        CASE 
+            WHEN MINUTE(load_date) = 0 THEN DATE_FORMAT(DATE_SUB(load_date, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00')
+            ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
+        END AS pv_date,
+        SUM(pv) as pv
+    FROM pqms_load_min
+    WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
+    GROUP BY pv_date
+    ORDER BY pv_date
+    """
     cur.execute(query)
     resultset = cur.fetchall()
-
-    result = pd.DataFrame(resultset, columns=pv_colum)
-    conn.commit()
-    conn.close()
-    return result
-
-def get_ess_monitor():
-    conn = conn_db()
-    cur = conn.cursor()
-    query = "SELECT * from ess_monitoring"
-    cur.execute(query)
-    resultset = cur.fetchall()
-
-    result = pd.DataFrame(resultset, columns=ess_colum)
+    result = pd.DataFrame(resultset, columns=['date', 'pv'])
 
     conn.commit()
     conn.close()
     return result
 
+
+
+def get_weather_data():
+    conn = conn_db()
+    cur = conn.cursor()
+    query = """
+    SELECT 
+		DATE_FORMAT(created_date, '%Y-%m-%d %H:00:00') AS weather_date,
+        AVG(weather_sunlight) as avg_sunlight,
+        AVG(weather_temperature) as avg_sunlight
+    FROM pms_converter_get
+    GROUP BY weather_date
+    ORDER BY weather_date
+    """
+    cur.execute(query)
+    resultset = cur.fetchall()
+
+    result = pd.DataFrame(resultset, columns=['date', 'sunlight','temperature'])
+
+    conn.commit()
+    conn.close()
+    return result
+
+def get_pv_dataset():
+    pv = get_pv_data()
+    weather = get_weather_data()
+    pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H:00:00')
+    pv.set_index('date')
+    weather['date'] = pd.to_datetime(weather['date'], format='%Y-%m-%d %H:00:00')
+    weather.set_index('date')
+    merge= pd.merge(weather, pv)
+    print(merge)
+
+get_pv_dataset()
 
 def get_pms_soc():
     conn = conn_db()

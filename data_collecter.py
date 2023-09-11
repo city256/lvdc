@@ -44,7 +44,7 @@ def predict_load():
     print(len(df2), df2.shape[0], df2.shape[1], df2.count())
     print(test, type(test))'''
 
-    df = db_fn.get_pqms_data()
+    df = db_fn.get_load_data()
     df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d %H:00:00')
     df = df.set_index('date')
 
