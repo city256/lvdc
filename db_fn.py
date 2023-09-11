@@ -134,8 +134,6 @@ def get_pv_dataset():
     print(merge)
     return merge
 
-get_pv_dataset()
-
 def get_pms_soc():
     conn = conn_db()
     cur = conn.cursor()

@@ -148,7 +148,7 @@ def predict_pv():
     driver.find_element(By.ID, 'txtLat').send_keys(34.982)
     driver.find_element(By.ID, 'txtLon').send_keys(126.690)
     driver.find_element(By.ID, 'search_btn').click()
-    time.sleep(10)
+    time.sleep(7)
 
     # 웹페이지의 HTML 가져오기
     html = driver.page_source
@@ -173,6 +173,7 @@ def predict_pv():
     pred_pv.to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
     pass
+predict_pv()
 
 def update_csv():
     load_proc = threading.Thread(target=predict_load)
@@ -184,6 +185,3 @@ def update_csv():
     load_proc.join()
     pv_proc.join()
     pass
-
-
-update_csv()
