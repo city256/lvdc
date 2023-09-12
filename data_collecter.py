@@ -3,7 +3,6 @@ import db_fn
 import datetime
 import time
 from selenium import webdriver
-from bs4 import BeautifulSoup
 import pandas as pd
 from selenium.webdriver.common.by import By
 import numpy as np
@@ -47,9 +46,6 @@ def predict_load():
     df = db_fn.get_load_data()
     df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d %H:00:00')
     df = df.set_index('date')
-
-
-
 
     # 데이터 정규화
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -126,28 +122,27 @@ def predict_load():
     print('load done : ',time.time() - start_time)
     pass
 
-
 def predict_pv():
     start = time.time()
-    print('entering pv')
+    print('entering pv_predict')
+
     # 크롬창 백그라운드 실행
     option = webdriver.ChromeOptions()
     option.add_argument('headless')
     option.add_argument('disable-gpu')
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome(options=option)
 
     # 웹페이지 접속
     driver.get(url)
 
     # 웹페이지 로딩 대기
-    driver.implicitly_wait(3)
-
-    driver.find_element(By.ID, 'info_4600000000').click()
     driver.implicitly_wait(1)
-    driver.find_element(By.ID, 'info_46170').click()
-    time.sleep(7)
 
-    # 지역 선택 및 클릭
+    # 전라남도 지도 선택
+    driver.find_element(By.XPATH, '//*[@id="map"]/div[5]/div[4]/div[13]').click()
+    driver.implicitly_wait(1)
+
+    # 지역 선택 및 클릭 (나주 태양광 발전량 선택 예제)
     '''driver.find_element(By.ID, 'install_cap').clear()
     driver.find_element(By.ID, 'install_cap').send_keys(pv_capasity)
     driver.find_element(By.ID, 'txtLat').send_keys(34.982)
@@ -155,27 +150,30 @@ def predict_pv():
     driver.find_element(By.ID, 'search_btn').click()
     time.sleep(7)'''
 
-    # 웹페이지의 HTML 가져오기
-    html = driver.page_source
+    # 기상청 예측 데이터  크롤링
+    pv_energy = driver.find_element(By.ID, 'toEnergy').text
+    split_pv_energy = pv_energy.split('\n')
 
-    # BeautifulSoup 객체 생성
-    soup = BeautifulSoup(html, 'html.parser')
-
-    pred_pv = pd.DataFrame(columns=['date', 'pv'])
-    sunlight = driver.find_element(By.ID, 'toEnergy').text
-    hour = sunlight.split('\n')
-    print(hour, sunlight)
-
+    # 크롤링 데이터 pd.DataFrame 으로 변경 및 생성
+    pred_pv = pd.DataFrame(columns=['date', 'sunlight', 'temperature'])
     i = 0
-    for x in hour:
-        energy = x.split(' ')
-        strtime = datetime.datetime.strptime(now_date+" "+re.sub('[^A-Za-z0-9]', '', energy[0]), '%Y-%m-%d %H')
+    for x in split_pv_energy:
+        weather = x.split(' ')
+        today_hour = datetime.datetime.strptime(now_date + " " + re.sub('[^A-Za-z0-9]', '', weather[0]), '%Y-%m-%d %H')
+
         # 특정 시간대 값이 누락 되었을 때
-        if energy[1] == '-':
-            pred_pv.loc[i] = [strtime, 0]
+        if weather[3] == '-':
+            pred_pv.loc[i] = [today_hour, 0, 0]
         else:
-            pred_pv.loc[i] = [strtime, float(energy[3])]
+            pred_pv.loc[i] = [today_hour, float(weather[3]), float(weather[4])]
+        if weather[8] == '-':
+            pred_pv.loc[i+24] = [today_hour + datetime.timedelta(days=1), 0, 0]
+        else:
+            pred_pv.loc[i+24] = [today_hour + datetime.timedelta(days=1), float(weather[8]), float(weather[9])]
         i += 1
+
+    # pred_pv.csv에 저장
+    pred_pv = pred_pv.sort_index()
     pred_pv.to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
     pass

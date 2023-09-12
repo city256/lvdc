@@ -3,15 +3,6 @@ import sys
 import pymysql
 import config as cfg
 
-
-pv_colum = ['id', 'date', 'date', 'date', 'gcur', 'gmos1', 'gmos2', 'gpower', 'gvolt',
-                                          'h1', 'h2', 'op', 'day', 'pvcur', 'pvmos1', 'pvmos2', 'pvnum', 'pvop',
-                                          'pvpower', 'pvvolt', 's1', 's2', 'devid']
-ess_colum = ['id', 'created_date', 'modified_date', 'charging_capacity', 'charging_status', 'collected_date' ,'device_status',	'discharge_capacity',	'ess_current',	'ess_power',	'ess_power_available',	'ess_voltage',	'grid_connectivity',	'grid_current,'	'grid_power',	'grid_voltage','internal_connectivity',	'max_soc',	'min_soc',	'negative_electrolyte_temperature,'	'number_of_abnormal_stack',	'number_of_normal_stack',	'operating_pump',	'operation_state',	'positive_electrolyte_temperature',	'pump_speed',	'soc',	'temperature',	'voltage_current_mode',	'device_id']
-pqms_colum = ['id', 'create_date','modified_date','ac_dc','dcdc','dc_home','ess_charge','ess_discharge', 'interlink', 'load_date', 'p_error', 'p_id','p_info','p_time','p_type','pqms_index','pv','time_index']
-
-
-
 def conn_db():
     try:
         conn = pymysql.connect(
