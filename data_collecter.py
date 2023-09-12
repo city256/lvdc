@@ -13,7 +13,7 @@ from tensorflow.keras.layers import LSTM, Dense
 import re
 
 # 기상청 태양광발전량 예측
-url = 'http://bd.kma.go.kr/kma2020/fs/energySelect2.do?menuCd=F050702000'
+url = 'https://bd.kma.go.kr/kma2020/fs/energySelect1.do?pageNum=5&menuCd=F050701000'
 pv_capasity = 0.25 # (mW) 0.25 = 250kW
 now_date = datetime.datetime.now().strftime('%Y-%m-%d')
 now_hour = datetime.datetime.now().strftime('%Y-%m-%d %H')
@@ -134,7 +134,7 @@ def predict_pv():
     option = webdriver.ChromeOptions()
     option.add_argument('headless')
     option.add_argument('disable-gpu')
-    driver = webdriver.Chrome(options=option)
+    driver = webdriver.Chrome()
 
     # 웹페이지 접속
     driver.get(url)
@@ -142,13 +142,18 @@ def predict_pv():
     # 웹페이지 로딩 대기
     driver.implicitly_wait(3)
 
+    driver.find_element(By.ID, 'info_4600000000').click()
+    driver.implicitly_wait(1)
+    driver.find_element(By.ID, 'info_46170').click()
+    time.sleep(7)
+
     # 지역 선택 및 클릭
-    driver.find_element(By.ID, 'install_cap').clear()
+    '''driver.find_element(By.ID, 'install_cap').clear()
     driver.find_element(By.ID, 'install_cap').send_keys(pv_capasity)
     driver.find_element(By.ID, 'txtLat').send_keys(34.982)
     driver.find_element(By.ID, 'txtLon').send_keys(126.690)
     driver.find_element(By.ID, 'search_btn').click()
-    time.sleep(7)
+    time.sleep(7)'''
 
     # 웹페이지의 HTML 가져오기
     html = driver.page_source
@@ -159,6 +164,7 @@ def predict_pv():
     pred_pv = pd.DataFrame(columns=['date', 'pv'])
     sunlight = driver.find_element(By.ID, 'toEnergy').text
     hour = sunlight.split('\n')
+    print(hour, sunlight)
 
     i = 0
     for x in hour:
@@ -168,7 +174,7 @@ def predict_pv():
         if energy[1] == '-':
             pred_pv.loc[i] = [strtime, 0]
         else:
-            pred_pv.loc[i] = [strtime, float(energy[1]) * 1000]
+            pred_pv.loc[i] = [strtime, float(energy[3])]
         i += 1
     pred_pv.to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
