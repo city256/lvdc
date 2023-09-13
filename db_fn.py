@@ -68,7 +68,7 @@ for i in range(len(pqms_data)):
             
         #print(pqms_data.loc['time_index'][0], index)
 '''
-def get_pv_data():
+def get_pv_data():   # DB에서 PQMS의 PV 발전량만 가져옴
     conn = conn_db()
     cur = conn.cursor()
     query = """
@@ -77,7 +77,7 @@ def get_pv_data():
             WHEN MINUTE(load_date) = 0 THEN DATE_FORMAT(DATE_SUB(load_date, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00')
             ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
         END AS pv_date,
-        SUM(pv) as pv
+        ROUND(SUM(pv), 2) as pv
     FROM pqms_load_min
     WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
     GROUP BY pv_date
@@ -91,16 +91,14 @@ def get_pv_data():
     conn.close()
     return result
 
-
-
-def get_weather_data():
+def get_weather_data():   # DB에서 PMS의 일사량, 온도 가져옴
     conn = conn_db()
     cur = conn.cursor()
     query = """
     SELECT 
 		DATE_FORMAT(created_date, '%Y-%m-%d %H:00:00') AS weather_date,
-        AVG(weather_sunlight) as avg_sunlight,
-        AVG(weather_temperature) as avg_sunlight
+        ROUND(AVG(weather_sunlight),2) as avg_sunlight,
+        ROUND(AVG(weather_temperature),2) as avg_temp
     FROM pms_converter_get
     GROUP BY weather_date
     ORDER BY weather_date
@@ -114,16 +112,40 @@ def get_weather_data():
     conn.close()
     return result
 
-def get_pv_dataset():
+def get_sunlight_data():  #DB에서 PMS의 일사량만 가져옴
+    conn = conn_db()
+    cur = conn.cursor()
+    query = """
+    SELECT 
+		DATE_FORMAT(created_date, '%Y-%m-%d %H:00:00') AS weather_date,
+        ROUND(AVG(weather_sunlight),2) as avg_sunlight
+    FROM pms_converter_get
+    GROUP BY weather_date
+    ORDER BY weather_date
+    """
+    cur.execute(query)
+    resultset = cur.fetchall()
+
+    result = pd.DataFrame(resultset, columns=['date', 'sunlight'])
+
+    conn.commit()
+    conn.close()
+    return result
+
+print(get_weather_data())
+
+
+def get_pv_dataset():   # PQMS의 PV발전량과 PMS의 날씨 데이터 병합
     pv = get_pv_data()
-    weather = get_weather_data()
+    weather = get_sunlight_data()
     pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H:00:00')
     pv.set_index('date')
     weather['date'] = pd.to_datetime(weather['date'], format='%Y-%m-%d %H:00:00')
     weather.set_index('date')
-    merge= pd.merge(weather, pv)
-    print(merge)
+    merge = pd.merge(weather, pv)
+    merge.to_csv('pv_db_data.csv')
     return merge
+print(get_pv_dataset())
 
 def get_pms_soc():
     conn = conn_db()
