@@ -40,7 +40,7 @@ def predict_load():
     scaled_data = scaler.fit_transform(df['load'].values.reshape(-1, 1))
 
     # 시퀀스 길이 설정 (가령, 과거 24시간 데이터를 기반으로 미래를 예측)
-    look_back = 24*3
+    look_back = 96
 
     # 훈련용 / 테스트용 데이터 분리
     train_size = int(len(scaled_data) * 0.75)
@@ -63,7 +63,7 @@ def predict_load():
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     # 모델 훈련
-    model.fit(trainX, trainY, epochs=100, batch_size=12, verbose=1)
+    model.fit(trainX, trainY, epochs=100, batch_size=32, verbose=1)
 
     # 테스트 데이터에 대한 예측값 생성
     testPredict = model.predict(testX)
@@ -126,9 +126,9 @@ def predict_pv():
     driver.implicitly_wait(1)
 
     # 전라남도 지도 선택
-    driver.find_element(By.XPATH, '//*[@id="map"]/div[5]/div[4]/div[13]').click()
+    driver.find_element(By.XPATH, '//*[@id="info_4600000000"]').click()
     driver.implicitly_wait(1)
-
+    time.sleep(3)
     # 지역 선택 및 클릭 (나주 태양광 발전량 선택 예제)
     '''driver.find_element(By.ID, 'install_cap').clear()
     driver.find_element(By.ID, 'install_cap').send_keys(pv_capasity)
@@ -164,7 +164,7 @@ def predict_pv():
     pred_pv.to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
     pass
-predict_load()
+#predict_load()
 
 def update_csv():
     load_proc = threading.Thread(target=predict_load)
@@ -176,3 +176,5 @@ def update_csv():
     load_proc.join()
     pv_proc.join()
     pass
+
+predict_pv()

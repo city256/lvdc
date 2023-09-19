@@ -41,7 +41,7 @@ def get_load_data():
             WHEN MINUTE(load_date) = 0 THEN DATE_FORMAT(DATE_SUB(load_date, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00')
             ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
         END AS target_hour,
-        SUM(dcdc + interlink + dc_home) as total_value
+        ROUND(SUM(dcdc + interlink + dc_home),2) as total_value
     FROM pqms_load_min
     WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
     GROUP BY target_hour
@@ -53,6 +53,7 @@ def get_load_data():
 
     conn.commit()
     conn.close()
+    result.to_csv('load_db_data.csv')
     return result
 
 #print(get_pqms_data())
@@ -131,13 +132,12 @@ def get_sunlight_data():  #DB에서 PMS의 일사량만 가져옴
     conn.commit()
     conn.close()
     return result
-
-print(get_weather_data())
+print(get_load_data())
 
 
 def get_pv_dataset():   # PQMS의 PV발전량과 PMS의 날씨 데이터 병합
     pv = get_pv_data()
-    weather = get_sunlight_data()
+    weather = get_weather_data()
     pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H:00:00')
     pv.set_index('date')
     weather['date'] = pd.to_datetime(weather['date'], format='%Y-%m-%d %H:00:00')
@@ -145,7 +145,6 @@ def get_pv_dataset():   # PQMS의 PV발전량과 PMS의 날씨 데이터 병합
     merge = pd.merge(weather, pv)
     merge.to_csv('pv_db_data.csv')
     return merge
-print(get_pv_dataset())
 
 def get_pms_soc():
     conn = conn_db()
