@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 import sys
 import pymysql
@@ -32,6 +33,64 @@ def get_test():
     conn.close()
     return result
 
+def put_pqms_data(json):
+    conn = conn_db()
+    cur = conn.cursor()
+    # id, create_date, modified_date, ac_dc, dcdc, dc_home, ess_charge, ess_discharge, interlink, load_date, p_error, p_id, p_info, p_time, p_type, pqms_index, pv, time_index
+    date = datetime.datetime.strptime(json['p_time'], '%Y-%m-%dT%H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
+    p_type = json['p_type']
+    p_info = json['p_info']
+    p_index = json['p_index']
+    p_error = json['p_error']
+    p_id = json['p_id']
+    index = json['p_contents']['index']
+    acdc = json['p_contents']['ACDC']
+    pv = json['p_contents']['PV']
+    dcdc = json['p_contents']['DCDC']
+    esscharge = json['p_contents']['ESSCharge']
+    essdischarge = json['p_contents']['ESSDischarge']
+    dchome = json['p_contents']['DCHome']
+    interlink = json['p_contents']['Interlink']
+
+    query = """
+        INSERT INTO pqms_load_event (id, create_date, modified_date, ac_dc, dcdc, dc_home, ess_charge, ess_discharge, interlink, load_date, p_error, p_id, p_info, p_time, p_type, pqms_index, pv, time_index)
+        VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE load_date=%s;
+    """
+    data = (date, date, acdc, dcdc, dchome, esscharge, essdischarge, interlink, date, p_error, p_id, p_info, date, p_type, p_index, pv, index, date)
+    cur.execute(query, data)
+    resultset = cur.fetchall()
+    result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv'])
+    conn.commit()
+    conn.close()
+    return result
+
+def get_pqms_data():
+    conn = conn_db()
+    cur = conn.cursor()
+    query = """
+    SELECT 
+        CASE 
+            WHEN MINUTE(load_date) = 0 THEN DATE_FORMAT(DATE_SUB(load_date, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00')
+            ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
+        END AS target_hour,
+        ROUND(SUM(ac_dc), 2),
+        ROUND(SUM(dcdc + interlink + dc_home), 2) as total_value,
+        ROUND(SUM(pv), 2)
+    FROM pqms_load_min
+    WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
+    GROUP BY target_hour
+    ORDER BY target_hour
+"""
+    cur.execute(query)
+    resultset = cur.fetchall()
+    result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv'])
+    result.to_csv('pqms_data.csv')
+    conn.commit()
+    conn.close()
+    return result
+print(get_pqms_data())
+
 def get_load_data():
     conn = conn_db()
     cur = conn.cursor()
@@ -55,19 +114,7 @@ def get_load_data():
     conn.close()
     return result
 
-#print(get_pqms_data())
 
-'''print(pqms_data['time_index'])
-print(len(pqms_data))
-i=0
-for i in range(len(pqms_data)):
-    if pqms_data['time_index'][i]%15==0:
-        index = pqms_data['time_index'][i]/15
-        if(index%4==0):
-            print(pqms_data['time_index'][i], index)
-            
-        #print(pqms_data.loc['time_index'][0], index)
-'''
 def get_pv_data():   # DB에서 PQMS의 PV 발전량만 가져옴
     conn = conn_db()
     cur = conn.cursor()
@@ -132,8 +179,6 @@ def get_sunlight_data():  #DB에서 PMS의 일사량만 가져옴
     conn.close()
     return result
 
-print(get_weather_data())
-
 
 def get_pv_dataset():   # PQMS의 PV발전량과 PMS의 날씨 데이터 병합
     pv = get_pv_data()
@@ -145,7 +190,6 @@ def get_pv_dataset():   # PQMS의 PV발전량과 PMS의 날씨 데이터 병합
     merge = pd.merge(weather, pv)
     merge.to_csv('pv_db_data.csv')
     return merge
-print(get_pv_dataset())
 
 def get_pms_soc():
     conn = conn_db()

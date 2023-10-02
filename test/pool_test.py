@@ -1,30 +1,39 @@
-import time
 import pandas as pd
-import config as cfg
-import datetime
-import json
-import mqtt_fn
+import matplotlib.pyplot as plt
+
+# CSV 파일 읽기
+data = pd.read_csv('../pqms_data_peak.csv', parse_dates=['date'])
+
+# datetime 컬럼을 인덱스로 설정
+data.set_index('date', inplace=True)
+
+# 특정 기간 동안의 데이터만 필터링 (예: '2022-01-01'부터 '2022-12-31'까지)
+filtered_data = data['2023-09-13':'2023-09-13']
+
+# 데이터를 시간별로 그룹화하고 평균값을 계산
+hourly_data = filtered_data.resample('H').mean()
+
+# 각 컬럼의 값을 가져옴
+acdc = hourly_data['acdc']
+load = hourly_data['load']
+pv = hourly_data['pv']
+
+# 그래프 그리기
+plt.figure(figsize=(30,15))  # 그래프 크기를 수정
+
+# 각 값에 대한 그래프를 그림
+plt.plot(acdc.index, acdc, label='ACDC', marker='o', linestyle='-')
+plt.plot(load.index, load, label='Load', marker='.', linestyle='--')
+plt.plot(pv.index, pv, label='PV', marker='x', linestyle='-.')
 
 
-cfg.soc_index['231'] = 341.13
-predict_until = pd.to_datetime(cfg.now_hour) + datetime.timedelta(days=7)
-# pub_msg = f'get?p_index={mqtt_fn.pms_index}&soc_report'
-# mqtt_fn.mqttc.publish(cfg.pub_pms_topic, pub_msg)
-print(predict_until)
-
-print(cfg.soc_index['231'])
-
-json_str = '{\r\n\t"p_type": "set",\r\n\t"p_id": "MG1_SVR_PMS",\r\n\t"p_cmd": "response/operation_mode",\r\n\t"p_index": 2,\r\n\t"p_error": 0,\r\n\t"p_time": "2023-08-17T09:37:51",\r\n\t"p_contents": {\r\n\t\t"operation_mode": 1,\r\n\t\t"power_reference": -250\r\n\t}\r\n}'
-json_str = json_str.replace("\'", "\"")
-import re
-p = re.compile('(?<!\\\\)\'')
-json_str = p.sub('\"', json_str)
-print(json_str)
-
-my_dict = json.loads(json_str)
-print(my_dict)  # 👉 <class 'dict'>
-
-my_json_str = json.dumps(my_dict)
-print(my_json_str)  # 👉 <class 'str'>
-#soc = 14.6
-#soc = cfg.soc_index[mqtt_fn.pms_index]
+# 그래프에 제목 및 라벨 추가
+plt.title('PQMS Data')
+plt.xlabel('Date', fontsize=30)
+plt.ylabel('kWh',fontsize=30)
+plt.grid(True)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
+plt.legend()  # 범례 표시
+plt.tight_layout()
+plt.show()

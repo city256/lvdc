@@ -40,7 +40,7 @@ def predict_load():
     scaled_data = scaler.fit_transform(df['load'].values.reshape(-1, 1))
 
     # 시퀀스 길이 설정 (가령, 과거 24시간 데이터를 기반으로 미래를 예측)
-    look_back = 24*3
+    look_back = 24
 
     # 훈련용 / 테스트용 데이터 분리
     train_size = int(len(scaled_data) * 0.75)
@@ -56,20 +56,20 @@ def predict_load():
 
     # LSTM 모델 생성
     model = Sequential()
-    model.add(LSTM(200, input_shape=(1, look_back)))
+    model.add(LSTM(100, input_shape=(1, look_back)))
     model.add(Dense(1))
 
     # 모델 컴파일
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     # 모델 훈련
-    model.fit(trainX, trainY, epochs=100, batch_size=12, verbose=1)
+    model.fit(trainX, trainY, epochs=50, batch_size=12, verbose=1)
 
     # 테스트 데이터에 대한 예측값 생성
     testPredict = model.predict(testX)
 
     # 예측값 스케일 역변환
-    testPredict = scaler.inverse_transform(testPredict)
+    scaler.inverse_transform(testPredict)
 
     # 예측하려는 날짜 설정
     predict_until = pd.to_datetime(now_hour) + datetime.timedelta(days=predict_range)
@@ -164,11 +164,36 @@ def predict_pv():
     pred_pv.to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
     pass
-predict_load()
+
+
+import datetime
+from pytimekr import pytimekr
+
+
+def check_date(date_str):
+    # 문자열에서 날짜 객체로 변환
+    date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    # 해당 날짜가 공휴일인지 확인
+    holidays = pytimekr.holidays(date_obj.year)
+
+    # 주말인지 확인
+    if date_obj.weekday() >= 5:  # 토요일
+        return "주말"
+    elif date_obj in holidays:
+        return "공휴일"
+    return "평일"
+
+
+# 예제
+print(datetime.datetime.today().date())
+date_str = str(datetime.datetime.today().date())  # 원하는 날짜를 입력
+print(check_date(date_str))
+
 
 def update_csv():
     load_proc = threading.Thread(target=predict_load)
     pv_proc = threading.Thread(target=predict_pv)
+
 
     load_proc.start()
     pv_proc.start()
@@ -176,3 +201,5 @@ def update_csv():
     load_proc.join()
     pv_proc.join()
     pass
+
+update_csv()

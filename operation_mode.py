@@ -60,12 +60,6 @@ def optimize_mode(soc):
         # print("wcnd = 0 대기")
         return 0
 
-#print(f'optimize pref={optimize_mode(21.5)}')
-for i in range(1,98):
-    #print(f'soc={i}, p_ref={optimize_mode(i)}\n')
-    print(f'soc={i}, p_ref={optimize_mode(i)}')
-
-
 def peak_mode(limit):
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
