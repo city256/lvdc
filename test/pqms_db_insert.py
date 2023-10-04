@@ -20,7 +20,7 @@ def on_connect(client, userdata, flags, rc):
 
 # 브로커에게 메시지가 도착하면 on_message 실행 (이벤트가 발생하면 호출)
 def on_message(client, obj, msg):
-    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+    #print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
     msg_handler(msg.payload)
 
 def on_publish(client, obj, mid):
@@ -47,9 +47,10 @@ def msg_handler(msg):
     # pms get response 처리
     if (msg_json['p_type'] == 'get' and date < until_date and int(msg_json['p_contents']['index'])%15==0):
         db.put_pqms_data(msg_json)
-        print(f'get Response Msg= {msg_json}')
+        #print(f'get Response Msg= {msg_json}')
     else:
-        print(f'Unknown Msg= {msg_str}')
+        #print(f'Unknown Msg= {msg_str}')
+        print('')
 
 
 # mqtt connection
@@ -59,4 +60,20 @@ mqttc.on_publish = on_publish
 mqttc.on_subscribe = on_subscribe
 mqttc.connect(host=cfg.broker_url, port=cfg.mqtt_port)
 mqttc.subscribe(sub_topic, 0)
-mqttc.loop_forever()
+mqttc.loop_start()
+
+'''for j in range(7, 26):
+    print(str(j).zfill(2))
+    for i in range(96):
+        print(i * 15)
+        pub_msg = f'get?p_index=222&pqms_load&date=2023-09-{str(j).zfill(2)}&time_index={i * 15}'
+        mqttc.publish('lvdc/pqms', pub_msg)
+        time.sleep(0.5)'''
+
+for i in range(96):
+    print(i * 15)
+    pub_msg = f'get?p_index=222&pqms_load&date=2023-09-01&time_index={i * 15}'
+    mqttc.publish('lvdc/pqms', pub_msg)
+    time.sleep(0.5)
+
+mqttc.loop_stop()

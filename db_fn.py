@@ -53,7 +53,7 @@ def put_pqms_data(json):
     interlink = json['p_contents']['Interlink']
 
     query = """
-        INSERT INTO pqms_load_event (id, create_date, modified_date, ac_dc, dcdc, dc_home, ess_charge, ess_discharge, interlink, load_date, p_error, p_id, p_info, p_time, p_type, pqms_index, pv, time_index)
+        INSERT INTO pqms_load_event (id, created_date, modified_date, ac_dc, dcdc, dc_home, ess_charge, ess_discharge, interlink, load_date, p_error, p_id, p_info, p_time, p_type, pqms_index, pv, time_index)
         VALUES (NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE load_date=%s;
     """
@@ -89,7 +89,6 @@ def get_pqms_data():
     conn.commit()
     conn.close()
     return result
-print(get_pqms_data())
 
 def get_load_data():
     conn = conn_db()
