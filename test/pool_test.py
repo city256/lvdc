@@ -2,13 +2,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # CSV 파일 읽기
-data = pd.read_csv('../pqms_data_peak.csv', parse_dates=['date'])
+data = pd.read_csv('../pqms_data.csv', parse_dates=['date'])
 
 # datetime 컬럼을 인덱스로 설정
 data.set_index('date', inplace=True)
 
 # 특정 기간 동안의 데이터만 필터링 (예: '2022-01-01'부터 '2022-12-31'까지)
-filtered_data = data['2023-09-13':'2023-09-13']
+filtered_data = data['2023-08-26':'2023-09-25']
 
 # 데이터를 시간별로 그룹화하고 평균값을 계산
 hourly_data = filtered_data.resample('H').mean()

@@ -46,15 +46,15 @@ def put_pqms_15():
         time_index
     FROM 
         pqms_load_event
-    WHERE e1.load_date BETWEEN '2023-08-27' AND '2023-09-26'
-    ON DUPLICATE KEY UPDATE load_date=e1.load_date;
+    WHERE load_date BETWEEN '2023-08-27' AND '2023-09-26'
+    ON DUPLICATE KEY UPDATE load_date
     """
 
     cur.execute(query)
     conn.commit()
     conn.close()
     return
-put_pqms_15()
+
 def put_pqms_data(json):
     conn = conn_db()
     cur = conn.cursor()
@@ -127,7 +127,7 @@ def get_pqms_data():
         ROUND(SUM(ac_dc), 2),
         ROUND(SUM(dcdc + interlink + dc_home), 2) as total_value,
         ROUND(SUM(pv), 2)
-    FROM pqms_load_min
+    FROM pqms_load_min_test
     WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
     GROUP BY target_hour
     ORDER BY target_hour
@@ -139,6 +139,7 @@ def get_pqms_data():
     conn.commit()
     conn.close()
     return result
+get_pqms_data()
 
 def get_load_data():
     conn = conn_db()
