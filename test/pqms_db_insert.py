@@ -62,6 +62,8 @@ mqttc.connect(host=cfg.broker_url, port=cfg.mqtt_port)
 mqttc.subscribe(sub_topic, 0)
 mqttc.loop_start()
 
+#db.put_pqms_data_index('2023-09-26 15:00:00',900, 65627, 85186.8, 314.69, 536.21, 25362.7)
+
 '''for j in range(7, 26):
     print(str(j).zfill(2))
     for i in range(96):
@@ -69,7 +71,7 @@ mqttc.loop_start()
         pub_msg = f'get?p_index=222&pqms_load&date=2023-09-{str(j).zfill(2)}&time_index={i * 15}'
         mqttc.publish('lvdc/pqms', pub_msg)
         time.sleep(0.5)'''
-
+'''
 for i in range(96):
     print(i * 15)
     pub_msg = f'get?p_index=222&pqms_load&date=2023-09-01&time_index={i * 15}'
@@ -77,3 +79,4 @@ for i in range(96):
     time.sleep(0.5)
 
 mqttc.loop_stop()
+'''
