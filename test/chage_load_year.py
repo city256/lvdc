@@ -1,48 +1,20 @@
 import datetime
-import string
+from pytimekr import pytimekr
 
-import pandas as pd
-import numpy as np
-import csv
-import re
-import matplotlib.pyplot as plt
+def check_date(date_str):
+    # 문자열에서 날짜 객체로 변환
+    date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    # 해당 날짜가 공휴일인지 확인
+    holidays = pytimekr.holidays(date_obj.year)
 
-dataset = pd.read_csv('../load_2020.csv', encoding='CP949')
+    # 주말인지 확인
+    if date_obj.weekday() >= 5:  # 토요일
+        return 1
+    elif date_obj in holidays:
+        return 1
+    return 0
 
-dataset['date']=pd.to_datetime(dataset['date'], format='%Y-%m-%d %H:%M:%S')
-data = pd.DataFrame(columns=['date','load'])
-#data = data.set_index('date')
-date_format = "%Y-%m-%d %H:%M:%S"
-
-print(data)
-for x, date, load in dataset.values:
-
-    year = date.year
-    month = date.month
-    day = date.day
-    hour = date.hour
-    minute = date.minute
-
-    try:
-        date_str = datetime.datetime.strptime('{}-{}-{} {}:{}:00'.format(year+3, month, day, hour, minute), date_format)
-        temp = pd.DataFrame(data=[[date_str, load*10]], columns=['date', 'load'])
-
-        data = pd.concat([data, temp], ignore_index=True)
-        #print(data)
-    except ValueError as ve:
-          None
-
-    #date_2023 = date_obj +datetime.timedelta(days=365)
-
-print(data)
-
-
-# data = data.sort_values(by='date', ignore_index=True)
-data.to_csv('../load_2023.csv')
-
-
-#data = pd.DataFrame(columns=['date','load'])
-
-
-
-
+# 예제
+print(datetime.datetime.today().date())
+date_str = str(datetime.datetime.today().date())  # 원하는 날짜를 입력
+print(check_date(date_str))

@@ -1,6 +1,9 @@
 import datetime
+from datetime import timedelta
 import pandas as pd
+import numpy as np
 import sys
+from pytimekr import pytimekr
 import pymysql
 import config as cfg
 
@@ -18,6 +21,43 @@ def conn_db():
         print(f"Error connecting to MariaDB Platform: {e}")
         sys.exit(1)
     return conn
+
+def put_chaged_date(origin_date, change_date):
+    conn = conn_db()
+    cur = conn.cursor()
+
+    query = f"""
+    INSERT INTO pqms_load_min_test (id, created_date, modified_date, p_time, ac_dc, dcdc, dc_home, ess_charge, ess_discharge, interlink, load_date, p_error, p_id, p_info, p_type, pqms_index, pv, time_index)
+            SELECT 
+                NULL,
+                DATE_ADD(created_date, INTERVAL {(datetime.datetime.strptime(change_date, '%Y-%m-%d') - datetime.datetime.strptime(origin_date, '%Y-%m-%d')).days} DAY),
+                DATE_ADD(modified_date, INTERVAL {(datetime.datetime.strptime(change_date, '%Y-%m-%d') - datetime.datetime.strptime(origin_date, '%Y-%m-%d')).days} DAY),
+                DATE_ADD(p_time, INTERVAL {(datetime.datetime.strptime(change_date, '%Y-%m-%d') - datetime.datetime.strptime(origin_date, '%Y-%m-%d')).days} DAY),
+                ac_dc,
+                dcdc,
+                dc_home,
+                ess_charge,
+                ess_discharge,
+                interlink,
+                DATE_ADD(load_date, INTERVAL {(datetime.datetime.strptime(change_date, '%Y-%m-%d') - datetime.datetime.strptime(origin_date, '%Y-%m-%d')).days} DAY),
+                p_error,
+                p_id,
+                p_info,
+                p_type,
+                pqms_index,
+                pv,
+                time_index
+            FROM 
+                pqms_load_min_test
+            WHERE 
+                load_date BETWEEN '{origin_date} 00:00:00' AND '{origin_date} 23:59:59';
+
+    """
+    cur.execute(query)
+    conn.commit()
+    conn.close()
+    return
+#put_chaged_date('2023-09-08', '2023-10-07')
 
 def put_pqms_15():
     conn = conn_db()
@@ -126,7 +166,12 @@ def get_pqms_data():
         END AS target_hour,
         ROUND(SUM(ac_dc), 2),
         ROUND(SUM(dcdc + interlink + dc_home), 2) as total_value,
-        ROUND(SUM(pv), 2)
+        ROUND(SUM(pv), 2),
+        CASE
+            WHEN WEEKDAY(load_date) IN (5,6) THEN 0
+            WHEN load_date IN ('2023-08-15','2023-09-28','2023-09-29','2023-09-30','2023-10-02','2023-10-03','2023-10-09', '2023-12-25') THEN 0
+            ELSE 1
+        END as workday
     FROM pqms_load_min_test
     WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
     GROUP BY target_hour
@@ -134,12 +179,23 @@ def get_pqms_data():
 """
     cur.execute(query)
     resultset = cur.fetchall()
-    result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv'])
+    result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv', 'workday'])
     result.to_csv('pqms_data.csv')
     conn.commit()
     conn.close()
     return result
-get_pqms_data()
+
+def check_date(date_str):
+
+    # 해당 날짜가 공휴일인지 확인
+    holidays = pytimekr.holidays(date_str.year)
+
+    # 주말인지 확인
+    if date_str.weekday() >= 5:  # 토요일
+        return 0
+    elif date_str in holidays:
+        return 0
+    return 1
 
 def get_load_data():
     conn = conn_db()
@@ -150,20 +206,43 @@ def get_load_data():
             WHEN MINUTE(load_date) = 0 THEN DATE_FORMAT(DATE_SUB(load_date, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00')
             ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
         END AS target_hour,
-        SUM(dcdc + interlink + dc_home) as total_value
-    FROM pqms_load_min
+        SUM(dcdc + interlink + dc_home) as total_value,
+        CASE
+            WHEN WEEKDAY(load_date) IN (5,6) THEN 0
+            WHEN load_date IN ('2023-08-15','2023-09-28','2023-09-29','2023-09-30','2023-10-02','2023-10-03','2023-10-09', '2023-12-25') THEN 0
+            ELSE 1
+        END as workday
+    FROM pqms_load_min_test
     WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
     GROUP BY target_hour
     ORDER BY target_hour
 """
     cur.execute(query)
     resultset = cur.fetchall()
-    result = pd.DataFrame(resultset, columns=['date', 'load'])
+    result = pd.DataFrame(resultset, columns=['date', 'load', 'workday'])
+
+    # 가장 마지막 날짜 데이터 추출
+    last_datetime = datetime.datetime.strptime(result['date'].iloc[-1], format('%Y-%m-%d %H:%M:%S'))
+
+    # 다음 24시간 날짜 데이터 생성
+    next_24_hours_dates = pd.date_range(start=last_datetime + timedelta(hours=1), periods=24, freq='H')
+
+    # load는 null, workday는 1로 설정
+    new_data = {'date': next_24_hours_dates,
+                'load': [np.nan] * 24,
+                'workday': [check_date(date) for date in pd.date_range(start=last_datetime + timedelta(hours=1), periods=24, freq='H')]}
+
+    # 새로운 DataFrame 생성
+    new_df = pd.DataFrame(new_data)
+
+    # 원본 DataFrame에 새로운 데이터 추가
+    result = pd.concat([result, new_df], ignore_index=True)
+
+    result.to_csv('load_workday_1.csv')
 
     conn.commit()
     conn.close()
     return result
-
 
 def get_pv_data():   # DB에서 PQMS의 PV 발전량만 가져옴
     conn = conn_db()
@@ -175,7 +254,7 @@ def get_pv_data():   # DB에서 PQMS의 PV 발전량만 가져옴
             ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
         END AS pv_date,
         ROUND(SUM(pv), 2) as pv
-    FROM pqms_load_min
+    FROM pqms_load_min_test
     WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
     GROUP BY pv_date
     ORDER BY pv_date
@@ -183,7 +262,6 @@ def get_pv_data():   # DB에서 PQMS의 PV 발전량만 가져옴
     cur.execute(query)
     resultset = cur.fetchall()
     result = pd.DataFrame(resultset, columns=['date', 'pv'])
-
     conn.commit()
     conn.close()
     return result
@@ -232,7 +310,7 @@ def get_sunlight_data():  #DB에서 PMS의 일사량만 가져옴
 
 def get_pv_dataset():   # PQMS의 PV발전량과 PMS의 날씨 데이터 병합
     pv = get_pv_data()
-    weather = get_sunlight_data()
+    weather = get_weather_data()
     pv['date'] = pd.to_datetime(pv['date'], format='%Y-%m-%d %H:00:00')
     pv.set_index('date')
     weather['date'] = pd.to_datetime(weather['date'], format='%Y-%m-%d %H:00:00')

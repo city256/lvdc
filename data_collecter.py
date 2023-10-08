@@ -9,6 +9,7 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
+from sklearn.ensemble import RandomForestRegressor
 import re
 
 # 기상청 태양광발전량 예측
@@ -65,14 +66,11 @@ def predict_load():
     # 모델 훈련
     model.fit(trainX, trainY, epochs=50, batch_size=12, verbose=1)
 
-    # 테스트 데이터에 대한 예측값 생성
-    testPredict = model.predict(testX)
 
-    # 예측값 스케일 역변환
-    scaler.inverse_transform(testPredict)
 
     # 예측하려는 날짜 설정
-    predict_until = pd.to_datetime(now_hour) + datetime.timedelta(days=predict_range)
+    #predict_until = pd.to_datetime(now_hour) + datetime.timedelta(days=predict_range)
+    predict_until = pd.to_datetime('2023-10-08 00:00:00')
 
     # 예측값을 저장할 빈 리스트 생성
     predictions = []
@@ -109,7 +107,33 @@ def predict_load():
     print('load done : ',time.time() - start_time)
     pass
 
-def predict_pv():
+
+def predict_pv(df):
+
+    # 'hour' 특성 추가
+    df['date'] = pd.to_datetime(df['date'])
+    df['hour'] = df['date'].dt.hour
+
+    # NaN이 아닌 부분을 훈련 데이터로 사용
+    train_df = df.dropna()
+
+    # Feature와 label 분리
+    features = train_df[['sunlight', 'temperature', 'hour']].values
+    labels = train_df['pv'].values
+
+    # Random Forest 모델 훈련
+    model = RandomForestRegressor(n_estimators=1000, random_state=42)
+    model.fit(features, labels)
+
+    # NaN인 pv 값을 예측
+    nan_indexes = df[df['pv'].isna()].index
+    for i in nan_indexes:
+        input_data = df.loc[i, ['sunlight', 'temperature', 'hour']].values.reshape(1, -1)
+        df.loc[i, 'pv'] = model.predict(input_data)[0]  # 예측 및 저장
+    return df
+
+
+def crawling_pv():
     start = time.time()
     print('entering pv_predict')
 
@@ -123,11 +147,11 @@ def predict_pv():
     driver.get(url)
 
     # 웹페이지 로딩 대기
-    driver.implicitly_wait(1)
+    driver.implicitly_wait(3)
 
     # 전라남도 지도 선택
     driver.find_element(By.XPATH, '//*[@id="map"]/div[5]/div[4]/div[13]').click()
-    driver.implicitly_wait(1)
+    driver.implicitly_wait(5)
 
     # 지역 선택 및 클릭 (나주 태양광 발전량 선택 예제)
     '''driver.find_element(By.ID, 'install_cap').clear()
@@ -159,41 +183,20 @@ def predict_pv():
             pred_pv.loc[i+24] = [today_hour + datetime.timedelta(days=1), float(weather[8]), float(weather[9])]
         i += 1
 
+    db_pv = db_fn.get_pv_dataset()
     # pred_pv.csv에 저장
     pred_pv = pred_pv.sort_index()
-    pred_pv.to_csv('pred_pv.csv')
+    pred_pv['pv'] = np.nan
+    db_pv = pd.concat([db_pv, pred_pv], ignore_index=True)
+    predict_pv(db_pv).to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
     pass
 
-
-import datetime
-from pytimekr import pytimekr
-
-
-def check_date(date_str):
-    # 문자열에서 날짜 객체로 변환
-    date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
-    # 해당 날짜가 공휴일인지 확인
-    holidays = pytimekr.holidays(date_obj.year)
-
-    # 주말인지 확인
-    if date_obj.weekday() >= 5:  # 토요일
-        return "주말"
-    elif date_obj in holidays:
-        return "공휴일"
-    return "평일"
-
-
-# 예제
-print(datetime.datetime.today().date())
-date_str = str(datetime.datetime.today().date())  # 원하는 날짜를 입력
-print(check_date(date_str))
-
+crawling_pv()
 
 def update_csv():
     load_proc = threading.Thread(target=predict_load)
-    pv_proc = threading.Thread(target=predict_pv)
-
+    pv_proc = threading.Thread(target=crawling_pv)
 
     load_proc.start()
     pv_proc.start()
@@ -202,4 +205,4 @@ def update_csv():
     pv_proc.join()
     pass
 
-update_csv()
+#update_csv()
