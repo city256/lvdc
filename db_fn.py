@@ -221,24 +221,19 @@ def get_load_data():
     resultset = cur.fetchall()
     result = pd.DataFrame(resultset, columns=['date', 'load', 'workday'])
 
-    # 가장 마지막 날짜 데이터 추출
-    last_datetime = datetime.datetime.strptime(result['date'].iloc[-1], format('%Y-%m-%d %H:%M:%S'))
-
     # 다음 24시간 날짜 데이터 생성
-    next_24_hours_dates = pd.date_range(start=last_datetime + timedelta(hours=1), periods=24, freq='H')
+    next_24_hours_dates = pd.date_range(start=(datetime.datetime.now() + timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00'), periods=24, freq='H')
 
     # load는 null, workday는 1로 설정
     new_data = {'date': next_24_hours_dates,
                 'load': [np.nan] * 24,
-                'workday': [check_date(date) for date in pd.date_range(start=last_datetime + timedelta(hours=1), periods=24, freq='H')]}
+                'workday': [check_date(date) for date in pd.date_range(start=datetime.datetime.now() + timedelta(hours=1), periods=24, freq='H')]}
 
     # 새로운 DataFrame 생성
     new_df = pd.DataFrame(new_data)
 
     # 원본 DataFrame에 새로운 데이터 추가
     result = pd.concat([result, new_df], ignore_index=True)
-
-    result.to_csv('load_workday_1.csv')
 
     conn.commit()
     conn.close()

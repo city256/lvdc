@@ -3,22 +3,22 @@ import datetime
 import pandas as pd
 import db_fn
 
-def optimize_mode(soc):
+date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
+
+def optimize_mode(soc=0):
+    # 예측된 부하량, 발전량 변수 가져오기
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-
-    date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
-
-    predWL = float(round(load.loc[load['date'] == date_str, 'load'], 2))
-    predWPV = float(pv.loc[cfg.now.hour]['pv'])
+    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
 
     # soc = cfg.soc_index[mqtt_fn.pms_index]
     #soc = db_fn.get_pms_soc()
 
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
+    print(wcnd)
 
-    wcnd = 314
     #print('predL: {}, predPV: {}, soc: {}'.format(predWL, predWPV, soc))
     #print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
 
@@ -59,13 +59,13 @@ def optimize_mode(soc):
     else:  # 대기 cwnd = 0
         # print("wcnd = 0 대기")
         return 0
-
+optimize_mode(32)
 def peak_mode(limit):
+    # 예측된 부하량, 발전량 변수 가져오기
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-    date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
-    predWL = float(load.loc[(load['date'] == date_str), 'load'])
-    predWPV = float(pv.loc[cfg.now.hour]['pv'])
+    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
@@ -104,12 +104,11 @@ def peak_mode(limit):
 
 
 def demand_mode():
-
+    # 예측된 부하량, 발전량 변수 가져오기
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-    date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
-    predWL = float(load.loc[(load['date'] == date_str), 'load'])
-    predWPV = float(pv.loc[cfg.now.hour]['pv'])
+    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
@@ -143,12 +142,11 @@ def demand_mode():
 
 
 def pv_mode():
-
+    # 예측된 부하량, 발전량 변수 가져오기
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-    date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
-    predWL = float(load.loc[(load['date'] == date_str), 'load'])
-    predWPV = float(pv.loc[cfg.now.hour]['pv'])
+    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
