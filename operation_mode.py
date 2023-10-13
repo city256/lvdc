@@ -5,97 +5,65 @@ import db_fn
 
 date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
 
-def optimize_mode(soc=0):
+def optimize_mode():
     # 예측된 부하량, 발전량 변수 가져오기
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
     predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    hour = datetime.datetime.now().hour
 
-    # soc = cfg.soc_index[mqtt_fn.pms_index]
-    #soc = db_fn.get_pms_soc()
-
+    soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
-    print(wcnd)
 
     #print('predL: {}, predPV: {}, soc: {}'.format(predWL, predWPV, soc))
     #print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
 
     if wcnd < 0: # 방전, 음수
-        if wsoc > cfg.min_capacity:  # wsoc가 10% 이상인지
-            if cfg.min_capacity > wsoc + wcnd:  # soc 10% 미만 방지
-                if wcnd <= -cfg.min_capacity:  # 컨버터 용량 초과 방지
-                    #print("wcnd+wsoc 10% 이상")
-                    return max(-(wsoc - cfg.min_capacity), -cfg.conv_capacity_1h)
-                else:
-                    #print("컨버터 용량 초과 방지")
-                    return -cfg.conv_capacity_1h
-            else:                                   # PF 값 선정
-                if wcnd <= -cfg.conv_capacity_1h:   # 컨버터 용량 초과 방지
-                    #print("컨버터 용량 초과 방지")
-                    return -cfg.conv_capacity_1h
-                else:
-                    #print("정상 방전")
-                    return wcnd
-        else:   # 배터리 soc 10% 미만일 경우
-            # print("SoC 10% 미만")
+        if 8 < hour < 19 and db_fn.check_date(datetime.datetime.now().date()):  # 근무일, 근무시간 9~18시 확인
+            if wsoc > cfg.min_capacity:  # wsoc가 soc_min + static Dis 이상인지 12% 이상인지
+                return max(-cfg.static_discharge, cfg.min_capacity - wsoc)
+            else:
+                return 0
+        else:
             return 0
     elif wcnd > 0:   # 충전 양수
         if wsoc < cfg.max_capacity:   # soc 90% 미만
-            if cfg.max_capacity < wsoc + wcnd:  # soc 90% 초과 방지
-                # print("wcnd+wsoc 90%이상")
-                return min(cfg.max_capacity - wsoc, cfg.conv_capacity_1h)
-            else:
-                if wcnd >= cfg.conv_capacity_1h:  # 컨버터 용량 초과 방지
-                    # print("컨버터 용량 초과 방지")
-                    return cfg.conv_capacity_1h
-                else:
-                    # print("정상 충전")
-                    return wcnd
+            return min(wcnd, cfg.max_capacity - wsoc, cfg.conv_capacity_1h)
         else:    # 배터리 soc 90% 초과일 경우
-            # print("SoC 90% 초과")
-            return 0
+            return 0   # print("SoC 90% 초과")
     else:  # 대기 cwnd = 0
         # print("wcnd = 0 대기")
         return 0
-optimize_mode(32)
+
+
 def peak_mode(limit):
     # 예측된 부하량, 발전량 변수 가져오기
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
     predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    hour = datetime.datetime.now().hour
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
-    hour = datetime.datetime.now().hour
-    peak_rate = 0.1
+    # peak_limit = limit # 함수 변수 사용
+    peak_limit = cfg.peak_limit
 
     if 22 <= hour or hour < 8:  # 충전 22시 ~ 08시
         if cfg.max_capacity > wsoc:    # soc 90% 초과 방지
-            if cfg.max_capacity - wsoc >= cfg.conv_capacity_1h:   # 컨버터 용량 초과 방지
-                return cfg.conv_capacity_1h
-            else:
-                return cfg.max_capacity - wsoc
-        else:               # 충전 불가능
+            return min(cfg.max_capacity - wsoc, cfg.conv_capacity_1h)  # 최대 출력으로 충전
+        else:  # 충전 불가능
             return 0
-    else:       # 방전 08시 ~ 21시
-        if -wcnd > limit:   # 피크 초과시
+    else:       # 방전 09시 ~ 21시
+        if -wcnd > peak_limit:   # 피크 초과시
             if wsoc >= cfg.min_capacity: # 배터리 잔여 전력 확인
-                if cfg.min_capacity > wsoc + wcnd:   # soc 10% 미만 방지
-                    if wcnd <= -cfg.conv_capacity_1h:  # 컨버터 용량 초과 방지
-                        return -cfg.conv_capacity_1h
-                    elif -wcnd + (wcnd + limit) * peak_rate < wsoc :
-                        return (wcnd + limit) * peak_rate
-                    else:
-                        return -(wsoc - cfg.min_capacity)
+                if cfg.min_capacity > wsoc + wcnd + peak_limit:   # soc 10% 미만 확인
+                    return cfg.min_capacity - wsoc # 10% 까지만 방전
                 else:   # 피크치 만큼 방전
-                    if (wcnd + limit) * peak_rate <= -cfg.conv_capacity_1h:  # 컨버터 용량 초과 방지
-                        return -cfg.conv_capacity_1h
-                    else:
-                        return (wcnd + limit) * peak_rate # 피크치 보다 10% 더 방전
+                    return max(wcnd + peak_limit, -cfg.conv_capacity_1h) # 피크치까지 방전
             else:   # ESS에 잔여 전력 없을시
                 return 0
         else:   # 피크 초과 안할시
@@ -109,36 +77,35 @@ def demand_mode():
     load = pd.read_csv('pred_load.csv')
     predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    hour = datetime.datetime.now().hour
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
-    wcnd = predWPV - predWL
-    hour = datetime.datetime.now().hour
+    wcnd = predWPV - predWL # 부하량
 
-    print('predL: {}, predPV: {}'.format(predWL, predWPV))
-    print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
+    #print('predL: {}, predPV: {}'.format(predWL, predWPV))
+    #print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
 
     if 22 <= hour or hour < 8:  # 충전 22시 ~ 08시 (경부하)
-        if cfg.max_capacity > wsoc:    # soc 90% 초과 방지
-            if cfg.max_capacity - wsoc >= cfg.conv_capacity_1h:   # 컨버터 용량 초과 방지
-                return cfg.conv_capacity_1h
-            else:
-                return cfg.max_capacity - wsoc
-        else:               # 충전 불가능
+        if cfg.max_capacity > wsoc : # soc 90% 초과 방지
+            return min(cfg.max_capacity - wsoc, cfg.conv_capacity_1h) # 경부하시간대 충전량 결정
+        else:          # soc 90% 이상 충전 불가능
             return 0
-    elif 8 <= hour < 16:  # 대기 08시 ~ 16시 (중간부하)
-        return 0
-    else:           # 방전 16시 ~ 22시 (최대부하)
-        if cfg.min_capacity >= wsoc + wcnd:  # soc 10% 이상 및 미만 방지 100 > 130-40(90)
-            if -wcnd <= cfg.conv_capacity_1h:  # 컨버터 최대 용량 제한
-                return -cfg.conv_capacity_1h
-            else:  # soc 10% 까지만 방전
-                return -(wsoc - cfg.min_capacity)
+    elif 11 == hour or 13 <= hour < 18:   # 방전 11~12시, 13~18시 (최대부하)
+        if wcnd < 0: # 방전, 음수
+            if cfg.min_capacity < wsoc:  # soc 10% 미만 확인
+                return max(wcnd, -cfg.conv_capacity_1h, cfg.min_capacity - wsoc)  # soc 10% 까지 방전
+            else:  # 방전량 만큼 방전
+                return 0
+        elif wcnd > 0: # 충전, 양수
+            if cfg.max_capacity > wsoc :  # soc 90% 초과 방지
+                return min(cfg.max_capacity - wsoc, cfg.conv_capacity_1h, wcnd)  # 충전량 결정
+            else:  # soc 90% 이상 충전 불가능
+                return 0
         else:
-            if -wcnd >= cfg.conv_capacity_1h:  # 컨버터 최대 용량 제한
-                return -cfg.conv_capacity_1h
-            else:  # soc 10% 까지만 방전
-                return wcnd
+            return 0
+    else:   # 대기 08~11시, 12~13시, 18~22시 (중간부하)
+        return 0
 
 
 def pv_mode():
@@ -152,30 +119,29 @@ def pv_mode():
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
     hour = datetime.datetime.now().hour
-    print('predL: {}, predPV: {}'.format(predWL, predWPV))
-    print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
+
+    #print('predL: {}, predPV: {}'.format(predWL, predWPV))
+    #print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
+
 
     if 10 <= hour < 16:  # 충전 10시 ~ 16시
-        if predWPV > 0 and wsoc < cfg.max_capacity:
-            if cfg.max_capacity >= wsoc + predWPV:  # soc 90% 이하 및 초과 방지   900 + 200
-                return predWPV
-            elif wsoc < cfg.max_capacity:   # soc 90% 까지만 충전
-                return cfg.max_capacity - wsoc
-            else:  # 충전 불가능 soc 90% 이상
+        if predWPV > 0:
+            if cfg.max_capacity > wsoc:  # soc 90% 초과 방지
+                return min(predWPV, cfg.max_capacity - wsoc, cfg.conv_capacity_1h)
+            else:
                 return 0
         else :
             return 0
     else:     # 그외 나머지 시간 방전
-        if wcnd < 0 and wsoc > cfg.min_capacity:  # 방전, 음수
-            if cfg.min_capacity >= wsoc + wcnd:    # soc 10% 이상 및 미만 방지 100 > 130-40(90)
-                if -wcnd <= cfg.conv_capacity_1h:  # 컨버터 최대 용량 제한
-                    return -cfg.conv_capacity_1h
-                else:   # soc 10% 까지만 방전
-                    return -(wsoc - cfg.min_capacity)
-            else:
-                if -wcnd >= cfg.conv_capacity_1h:  # 컨버터 최대 용량 제한
-                    return -cfg.conv_capacity_1h
-                else:   # soc 10% 까지만 방전
-                    return wcnd
+        if wcnd < 0:  # 방전, 음수
+            if cfg.min_capacity < wsoc:  # soc 10% 미만 확인
+                return max(wcnd, -cfg.conv_capacity_1h, cfg.min_capacity - wsoc)  # soc 10% 까지 방전
+            else:  # 방전량 만큼 방전
+                return 0
+        elif wcnd > 0:  # 충전, 양수
+            if cfg.max_capacity > wsoc:  # soc 90% 초과 방지
+                return min(cfg.max_capacity - wsoc, cfg.conv_capacity_1h, wcnd)  # 충전량 결정
+            else:  # soc 90% 이상 충전 불가능
+                return 0
         else:   # 방전 불가능 soc 10% 미만
             return 0

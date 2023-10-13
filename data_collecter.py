@@ -270,6 +270,8 @@ def crawling_pv():
     # 크롬창 백그라운드 실행
     option = webdriver.ChromeOptions()
     option.add_argument('headless')
+    option.add_argument('--headless')
+    option.add_argument('--no-sandbox')
     option.add_argument('disable-gpu')
     driver = webdriver.Chrome(options=option)
 
@@ -323,7 +325,7 @@ def crawling_pv():
     pass
 
 def update_csv():
-    print('start predict')
+    print(datetime.datetime.now(),'- start predict')
     start_time = time.time()
     load_proc = threading.Thread(target=predict_load_rf())
     pv_proc = threading.Thread(target=crawling_pv)
@@ -333,8 +335,6 @@ def update_csv():
 
     load_proc.join()
     pv_proc.join()
-    print('predict done : ', time.time() - start_time)
+    print(datetime.datetime.now(),'- predict done : ', time.time() - start_time)
 
     pass
-
-update_csv()

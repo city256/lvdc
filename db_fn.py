@@ -16,7 +16,6 @@ def conn_db():
             port=cfg.db_port,
             db=cfg.db_name
         )
-        print("DB connection Success!")
     except pymysql.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
         sys.exit(1)

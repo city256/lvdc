@@ -31,6 +31,13 @@ conv_capacity_15m = 62.5
 # algorithm period
 period = 0.25 # 1 = 1hour, 0.5 = 30min, 0.25 = 15min
 
+# algorithm variables
+workinghour_per_week = 40 # 주중 근무 시간
+static_discharge = ess_capacity * 0.8 / workinghour_per_week # 근무시간 당 방전량 20kW
+contract_power = 500 # 계약 용량 500kW
+peak_rate = 0.9
+peak_limit = contract_power/3 * peak_rate # 피크 제한치 150kW
+
 # SoC Limit
 soc_min = 10
 soc_max = 90
