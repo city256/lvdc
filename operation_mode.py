@@ -3,10 +3,9 @@ import datetime
 import pandas as pd
 import db_fn
 
-date_str = (cfg.now + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
-
 def optimize_mode():
     # 예측된 부하량, 발전량 변수 가져오기
+    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
     predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
@@ -40,6 +39,7 @@ def optimize_mode():
 
 def peak_mode(limit):
     # 예측된 부하량, 발전량 변수 가져오기
+    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
     predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
@@ -73,6 +73,7 @@ def peak_mode(limit):
 
 def demand_mode():
     # 예측된 부하량, 발전량 변수 가져오기
+    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
     predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
@@ -110,6 +111,7 @@ def demand_mode():
 
 def pv_mode():
     # 예측된 부하량, 발전량 변수 가져오기
+    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
     predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))

@@ -10,6 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 from sklearn.ensemble import RandomForestRegressor
+import config as cfg
 import re
 
 # 기상청 태양광발전량 예측
@@ -161,13 +162,16 @@ def predict_load_lstm():
     print('load done : ', time.time() - start_time)
     pass
 
+
 def predict_load_xgb():
     import xgboost as xgb
+
     print('entering load')
     start_time = time.time()
 
     # CSV 파일 로드
-    df = db_fn.get_load_data()
+    #df = db_fn.get_load_data()
+    df = pd.read_csv('pred_load_test.csv')
     df['date'] = pd.to_datetime(df['date'])
 
     # 데이터 전처리
@@ -187,19 +191,23 @@ def predict_load_xgb():
     labels = labels / max_load  # 간단하게 0~1 범위로 정규화
 
     # XGBoost 모델 훈련
-    model = xgb.XGBRegressor(objective='reg:squarederror', n_estimators=3000)
+    model = xgb.XGBRegressor(objective='reg:squarederror', n_estimators=5000, learning_rate=0.5, max_depth=30)
     model.fit(features, labels)
 
     # NaN인 load 값을 예측
     for i in range(len(df) - 24, len(df)):
         input_data = df.loc[i, ['hour', 'workday']].values.reshape(1, -1)
         input_data = scaler.transform(input_data)  # 정규화
-        df.loc[i, 'load'] = model.predict(input_data)[0] * max_load  # 정규화 해제 및 저장
+        if df.loc[i, 'workday'] == 0:
+            df.loc[i, 'load'] = model.predict(input_data)[0] * max_load  # workday가 0일 때 다른 값을 설정
+        else:
+            df.loc[i, 'load'] = model.predict(input_data)[0] * 290  # workday가 0이 아닐 때의 값
 
     df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
 
+#predict_load_xgb()
 def predict_load_rf():
     from sklearn.ensemble import RandomForestRegressor
     print('entering load')
@@ -252,7 +260,7 @@ def predict_pv(df):
     labels = train_df['pv'].values
 
     # Random Forest 모델 훈련
-    model = RandomForestRegressor(n_estimators=1000, random_state=42)
+    model = RandomForestRegressor(n_estimators=2000, random_state=22)
     model.fit(features, labels)
 
     # NaN인 pv 값을 예측
@@ -308,11 +316,11 @@ def crawling_pv():
         if weather[3] == '-':
             pred_pv.loc[i] = [today_hour, 0, 0]
         else:
-            pred_pv.loc[i] = [today_hour, float(weather[3]), float(weather[4])]
+            pred_pv.loc[i] = [today_hour, float(weather[3]) * cfg.sunlight_scaling, float(weather[4])]
         if weather[8] == '-':
             pred_pv.loc[i+24] = [today_hour + datetime.timedelta(days=1), 0, 0]
         else:
-            pred_pv.loc[i+24] = [today_hour + datetime.timedelta(days=1), float(weather[8]), float(weather[9])]
+            pred_pv.loc[i+24] = [today_hour + datetime.timedelta(days=1), float(weather[8]) * cfg.sunlight_scaling, float(weather[9])]
         i += 1
 
     db_pv = db_fn.get_pv_dataset()
@@ -320,14 +328,16 @@ def crawling_pv():
     pred_pv = pred_pv.sort_index()
     pred_pv['pv'] = np.nan
     db_pv = pd.concat([db_pv, pred_pv], ignore_index=True)
-    predict_pv(db_pv).to_csv('pred_pv.csv')
+    # 테스트용 데이터 삽입
+    test_pd = pd.read_csv('pred_pv_test.csv')
+    predict_pv(test_pd).to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
     pass
-
+#crawling_pv()
 def update_csv():
     print(datetime.datetime.now(),'- start predict')
     start_time = time.time()
-    load_proc = threading.Thread(target=predict_load_rf())
+    load_proc = threading.Thread(target=predict_load_xgb())
     pv_proc = threading.Thread(target=crawling_pv)
 
     load_proc.start()
@@ -337,4 +347,10 @@ def update_csv():
     pv_proc.join()
     print(datetime.datetime.now(),'- predict done : ', time.time() - start_time)
 
+    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    pv = pd.read_csv('pred_pv.csv')
+    load = pd.read_csv('pred_load.csv')
+    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    print('Load = ',predWL, ', PV = ',predWPV)
     pass

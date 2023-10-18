@@ -50,13 +50,13 @@ def put_chaged_date(origin_date, change_date):
                 pqms_load_min_test
             WHERE 
                 load_date BETWEEN '{origin_date} 00:00:00' AND '{origin_date} 23:59:59';
-
     """
     cur.execute(query)
     conn.commit()
     conn.close()
     return
-#put_chaged_date('2023-09-08', '2023-10-07')
+
+#put_chaged_date('2023-09-18', '2023-10-16')
 
 def put_pqms_15():
     conn = conn_db()
@@ -188,6 +188,9 @@ def check_date(date_str):
 
     # 해당 날짜가 공휴일인지 확인
     holidays = pytimekr.holidays(date_str.year)
+    if datetime.datetime.now().hour >= 12 :
+        print('hi')
+        return 0
 
     # 주말인지 확인
     if date_str.weekday() >= 5:  # 토요일
@@ -195,7 +198,7 @@ def check_date(date_str):
     elif date_str in holidays:
         return 0
     return 1
-
+#check_date((datetime.datetime.now() + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00'))
 def get_load_data():
     conn = conn_db()
     cur = conn.cursor()
@@ -221,12 +224,12 @@ def get_load_data():
     result = pd.DataFrame(resultset, columns=['date', 'load', 'workday'])
 
     # 다음 24시간 날짜 데이터 생성
-    next_24_hours_dates = pd.date_range(start=(datetime.datetime.now() + timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00'), periods=24, freq='H')
+    next_24_hours_dates = pd.date_range(start=(datetime.datetime.now() ).strftime('%Y-%m-%d %H:00:00'), periods=24, freq='H')
 
     # load는 null, workday는 1로 설정
     new_data = {'date': next_24_hours_dates,
                 'load': [np.nan] * 24,
-                'workday': [check_date(date) for date in pd.date_range(start=datetime.datetime.now() + timedelta(hours=1), periods=24, freq='H')]}
+                'workday': [check_date(date) for date in pd.date_range(start=datetime.datetime.now(), periods=24, freq='H')]}
 
     # 새로운 DataFrame 생성
     new_df = pd.DataFrame(new_data)
