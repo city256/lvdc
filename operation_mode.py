@@ -24,16 +24,20 @@ def optimize_mode():
             if wsoc > cfg.min_capacity:  # wsoc가 soc_min + static Dis 이상인지 12% 이상인지
                 return max(-cfg.static_discharge, cfg.min_capacity - wsoc)
             else:
+                print('배터리 상한치')
                 return 0
         else:
+            print('근무시간외')
             return 0
     elif wcnd > 0:   # 충전 양수
         if wsoc < cfg.max_capacity:   # soc 90% 미만
             return min(wcnd, cfg.max_capacity - wsoc, cfg.conv_capacity_1h)
         else:    # 배터리 soc 90% 초과일 경우
+            print('배터리 90% 이상')
             return 0   # print("SoC 90% 초과")
     else:  # 대기 cwnd = 0
         # print("wcnd = 0 대기")
+        print('대기')
         return 0
 
 

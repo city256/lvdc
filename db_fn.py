@@ -188,9 +188,6 @@ def check_date(date_str):
 
     # 해당 날짜가 공휴일인지 확인
     holidays = pytimekr.holidays(date_str.year)
-    if datetime.datetime.now().hour >= 12 :
-        print('hi')
-        return 0
 
     # 주말인지 확인
     if date_str.weekday() >= 5:  # 토요일
@@ -199,6 +196,7 @@ def check_date(date_str):
         return 0
     return 1
 #check_date((datetime.datetime.now() + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00'))
+
 def get_load_data():
     conn = conn_db()
     cur = conn.cursor()

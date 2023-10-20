@@ -158,7 +158,7 @@ def predict_load_lstm():
         input_data = scaler.transform(input_data)  # 정규화
         predicted = model.predict(input_data.reshape(1, n_past, 2))  # reshape 및 예측
         df.loc[i, 'load'] = predicted[0][0] * max(train_df['load'])  # 정규화 해제 및 저장
-    df.to_csv('pred_load.csv')
+    #df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
 
@@ -242,7 +242,7 @@ def predict_load_rf():
         input_data = scaler.transform(input_data)  # 정규화 (옵션)
         df.loc[i, 'load'] = model.predict(input_data)[0] * max(train_df['load'])  # 정규화 해제 및 저장
 
-    df.to_csv('pred_load.csv')
+    #df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
 
