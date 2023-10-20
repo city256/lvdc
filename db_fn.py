@@ -154,7 +154,7 @@ def put_pqms_data_index(time, index, acdc, dcdc, dchome, interlink, pv):
     conn.close()
     return
 
-def get_pqms_data():
+def get_pqms_data_hour():
     conn = conn_db()
     cur = conn.cursor()
     query = """
@@ -166,20 +166,74 @@ def get_pqms_data():
         ROUND(SUM(ac_dc), 2),
         ROUND(SUM(dcdc + interlink + dc_home), 2) as total_value,
         ROUND(SUM(pv), 2),
+        ROUND(SUM(ess_charge), 2),
+        ROUND(SUM(ess_discharge), 2),
         CASE
             WHEN WEEKDAY(load_date) IN (5,6) THEN 0
             WHEN load_date IN ('2023-08-15','2023-09-28','2023-09-29','2023-09-30','2023-10-02','2023-10-03','2023-10-09', '2023-12-25') THEN 0
             ELSE 1
         END as workday
-    FROM pqms_load_min_test
+    FROM pqms_load_min
     WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
     GROUP BY target_hour
     ORDER BY target_hour
 """
     cur.execute(query)
     resultset = cur.fetchall()
-    result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv', 'workday'])
+    result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv', 'ess_charge', 'ess_discharge', 'workday'])
     result.to_csv('pqms_data.csv')
+    conn.commit()
+    conn.close()
+    return result
+get_pqms_data_hour()
+def get_pqms_data_15():
+    conn = conn_db()
+    cur = conn.cursor()
+    query = """
+    SELECT 
+        DATE_FORMAT(load_date, '%Y-%m-%d %H:%i:00'),
+        ROUND((ac_dc), 2),
+        ROUND((dcdc + interlink + dc_home), 2) as total_value,
+        ROUND((pv), 2),
+        ROUND((ess_charge), 2),
+        ROUND((ess_discharge), 2),
+        CASE
+            WHEN WEEKDAY(load_date) IN (5,6) THEN 0
+            WHEN load_date IN ('2023-08-15','2023-09-28','2023-09-29','2023-09-30','2023-10-02','2023-10-03','2023-10-09', '2023-12-25') THEN 0
+            ELSE 1
+        END as workday
+    FROM pqms_load_min
+"""
+    cur.execute(query)
+    resultset = cur.fetchall()
+    result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv', 'ess_charge', 'ess_discharge', 'workday'])
+    result.to_csv('pqms_data_15.csv')
+    conn.commit()
+    conn.close()
+    return result
+get_pqms_data_15()
+def get_pqms_data_origin():
+    conn = conn_db()
+    cur = conn.cursor()
+    query = """
+    SELECT 
+        DATE_FORMAT(load_date, '%Y-%m-%d %H:%i:00'),
+        ROUND((ac_dc - ess_discharge), 2),
+        ROUND((dcdc + interlink + dc_home), 2) as total_value,
+        ROUND((pv), 2),
+        ROUND((ess_charge), 2),
+        ROUND((ess_discharge), 2),
+        CASE
+            WHEN WEEKDAY(load_date) IN (5,6) THEN 0
+            WHEN load_date IN ('2023-08-15','2023-09-28','2023-09-29','2023-09-30','2023-10-02','2023-10-03','2023-10-09', '2023-12-25') THEN 0
+            ELSE 1
+        END as workday
+    FROM pqms_load_min
+"""
+    cur.execute(query)
+    resultset = cur.fetchall()
+    result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv', 'ess_charge', 'ess_discharge', 'workday'])
+    result.to_csv('pqms_data_origin.csv')
     conn.commit()
     conn.close()
     return result
