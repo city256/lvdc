@@ -185,7 +185,7 @@ def get_pqms_data_hour():
     conn.commit()
     conn.close()
     return result
-get_pqms_data_hour()
+
 def get_pqms_data_15():
     conn = conn_db()
     cur = conn.cursor()
@@ -211,7 +211,7 @@ def get_pqms_data_15():
     conn.commit()
     conn.close()
     return result
-get_pqms_data_15()
+
 def get_pqms_data_origin():
     conn = conn_db()
     cur = conn.cursor()
@@ -240,16 +240,14 @@ def get_pqms_data_origin():
 
 def check_date(date_str):
 
+    date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:00')
     # 해당 날짜가 공휴일인지 확인
-    holidays = pytimekr.holidays(date_str.year)
+    holidays = pytimekr.holidays(date.year)
 
-    # 주말인지 확인
-    if date_str.weekday() >= 5:  # 토요일
-        return 0
-    elif date_str in holidays:
-        return 0
-    return 1
-#check_date((datetime.datetime.now() + datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00'))
+    if date.weekday() >= 5 or date.date() in holidays:
+        return 0  # 공휴일 또는 주말
+    else:
+        return 1  # 평일, 주중
 
 def get_load_data():
     conn = conn_db()
@@ -260,12 +258,7 @@ def get_load_data():
             WHEN MINUTE(load_date) = 0 THEN DATE_FORMAT(DATE_SUB(load_date, INTERVAL 1 HOUR), '%Y-%m-%d %H:00:00')
             ELSE DATE_FORMAT(load_date, '%Y-%m-%d %H:00:00') 
         END AS target_hour,
-        SUM(dcdc + interlink + dc_home) as total_value,
-        CASE
-            WHEN WEEKDAY(load_date) IN (5,6) THEN 0
-            WHEN load_date IN ('2023-08-15','2023-09-28','2023-09-29','2023-09-30','2023-10-02','2023-10-03','2023-10-09', '2023-12-25') THEN 0
-            ELSE 1
-        END as workday
+        SUM(dcdc + interlink + dc_home) as total_value
     FROM pqms_load_min_test
     WHERE MINUTE(load_date) >= 15 OR MINUTE(load_date) = 0
     GROUP BY target_hour
@@ -273,7 +266,10 @@ def get_load_data():
 """
     cur.execute(query)
     resultset = cur.fetchall()
-    result = pd.DataFrame(resultset, columns=['date', 'load', 'workday'])
+    result = pd.DataFrame(resultset, columns=['date', 'load'])
+
+    # 날짜별 근무일 항목 생성
+    result['workday'] = result['date'].apply(check_date)
 
     # 다음 24시간 날짜 데이터 생성
     next_24_hours_dates = pd.date_range(start=(datetime.datetime.now() ).strftime('%Y-%m-%d %H:00:00'), periods=24, freq='H')
@@ -281,7 +277,7 @@ def get_load_data():
     # load는 null, workday는 1로 설정
     new_data = {'date': next_24_hours_dates,
                 'load': [np.nan] * 24,
-                'workday': [check_date(date) for date in pd.date_range(start=datetime.datetime.now(), periods=24, freq='H')]}
+                'workday': [check_date(str(date)) for date in next_24_hours_dates]}
 
     # 새로운 DataFrame 생성
     new_df = pd.DataFrame(new_data)
@@ -292,6 +288,43 @@ def get_load_data():
     conn.commit()
     conn.close()
     return result
+
+def get_load_data_15():
+    conn = conn_db()
+    cur = conn.cursor()
+    query = """
+    SELECT 
+        DATE_FORMAT(load_date, '%Y-%m-%d %H:%i:00'),
+        ROUND((dcdc + interlink + dc_home), 2) as total_value
+    FROM pqms_load_min_test
+"""
+    cur.execute(query)
+    resultset = cur.fetchall()
+    result = pd.DataFrame(resultset, columns=['date', 'load'])
+
+    # 날짜별 근무일 항목 생성
+    result['workday'] = result['date'].apply(check_date)
+
+    # 다음 15분 주기 계산
+    next_15_minutes = datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))
+
+    # 다음 24시간의 15분 데이터 생성
+    next_24_hours_dates = pd.date_range(start=next_15_minutes.strftime('%Y-%m-%d %H:%M:00'), periods=96, freq='15T')
+
+    # load는 null, workday는 1로 설정
+    new_data = {'date': next_24_hours_dates,
+                'load': [np.nan] * 96,
+                'workday': [check_date(str(date)) for date in next_24_hours_dates]}
+    # 새로운 DataFrame 생성
+    next_24 = pd.DataFrame(new_data)
+
+    # 원본 DataFrame에 새로운 데이터 추가
+    result = pd.concat([result, next_24], ignore_index=True)
+    conn.commit()
+    conn.close()
+    result.to_csv('load_data_15.csv')
+    return result
+
 
 def get_pv_data():   # DB에서 PQMS의 PV 발전량만 가져옴
     conn = conn_db()

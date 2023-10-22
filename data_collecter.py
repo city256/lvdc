@@ -117,15 +117,15 @@ def predict_load_lstm():
     df = db_fn.get_load_data()
     df['date'] = pd.to_datetime(df['date'])
 
-
     # 데이터 전처리
     df['hour'] = df['date'].dt.hour
+    df['minute'] = df['date'].dt.minute  # 15분 단위 데이터를 처리하기 위해 분도 추출
 
     # NaN이 아닌 부분을 훈련 데이터로 사용
     train_df = df.dropna()
 
     # Feature와 label 분리
-    features = train_df[['hour', 'workday']].values
+    features = train_df[['hour', 'minute', 'workday']].values
     labels = train_df['load'].values
 
     # 데이터 정규화
@@ -135,7 +135,7 @@ def predict_load_lstm():
 
     # LSTM에 입력할 데이터 형태로 변환
     X, y = [], []
-    n_past = 168  # 과거 240개 데이터를 사용
+    n_past = 672  # 과거 x개 데이터를 사용
     for i in range(n_past, len(features)):
         X.append(features[i - n_past:i])
         y.append(labels[i])
@@ -145,7 +145,7 @@ def predict_load_lstm():
 
     # LSTM 모델 구성
     model = Sequential()
-    model.add(LSTM(100, activation='relu', input_shape=(n_past, 2)))  # input_shape 수정
+    model.add(LSTM(100, activation='relu', input_shape=(n_past, 3)))  # input_shape 수정
     model.add(Dense(1))
     model.compile(optimizer='adam', loss='mse')
 
@@ -154,11 +154,11 @@ def predict_load_lstm():
 
     # NaN인 load 값을 예측
     for i in range(len(df) - 24, len(df)):
-        input_data = df.loc[i - n_past:i - 1, ['hour', 'workday']].values
+        input_data = df.loc[i - n_past:i - 1, ['hour', 'minute', 'workday']].values
         input_data = scaler.transform(input_data)  # 정규화
         predicted = model.predict(input_data.reshape(1, n_past, 2))  # reshape 및 예측
         df.loc[i, 'load'] = predicted[0][0] * max(train_df['load'])  # 정규화 해제 및 저장
-    #df.to_csv('pred_load.csv')
+    df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
 
@@ -170,18 +170,19 @@ def predict_load_xgb():
     start_time = time.time()
 
     # CSV 파일 로드
-    #df = db_fn.get_load_data()
-    df = pd.read_csv('pred_load_test.csv')
+    df = db_fn.get_load_data_15()
+    #df = pd.read_csv('pred_load_test.csv')
     df['date'] = pd.to_datetime(df['date'])
 
     # 데이터 전처리
     df['hour'] = df['date'].dt.hour
+    df['minute'] = df['date'].dt.minute  # 15분 단위 데이터를 처리하기 위해 분도 추출
 
     # NaN이 아닌 부분을 훈련 데이터로 사용
     train_df = df.dropna()
 
     # Feature와 label 분리
-    features = train_df[['hour', 'workday']].values
+    features = train_df[['hour', 'minute', 'workday']].values
     labels = train_df['load'].values
 
     # 데이터 정규화
@@ -195,19 +196,19 @@ def predict_load_xgb():
     model.fit(features, labels)
 
     # NaN인 load 값을 예측
-    for i in range(len(df) - 24, len(df)):
-        input_data = df.loc[i, ['hour', 'workday']].values.reshape(1, -1)
+    for i in range(len(df) - 96, len(df)):
+        input_data = df.loc[i, ['hour', 'minute', 'workday']].values.reshape(1, -1)
         input_data = scaler.transform(input_data)  # 정규화
         if df.loc[i, 'workday'] == 0:
             df.loc[i, 'load'] = model.predict(input_data)[0] * max_load  # workday가 0일 때 다른 값을 설정
         else:
-            df.loc[i, 'load'] = model.predict(input_data)[0] * 290  # workday가 0이 아닐 때의 값
+            df.loc[i, 'load'] = model.predict(input_data)[0] * 75  # workday가 0이 아닐 때의 값
 
     df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
 
-#predict_load_xgb()
+
 def predict_load_rf():
     from sklearn.ensemble import RandomForestRegressor
     print('entering load')
@@ -219,12 +220,13 @@ def predict_load_rf():
 
     # 데이터 전처리
     df['hour'] = df['date'].dt.hour
+    df['minute'] = df['date'].dt.minute  # 15분 단위 데이터를 처리하기 위해 분도 추출
 
     # NaN이 아닌 부분을 훈련 데이터로 사용
     train_df = df.dropna()
 
     # Feature와 label 분리
-    features = train_df[['hour', 'workday']].values
+    features = train_df[['hour', 'minute', 'workday']].values
     labels = train_df['load'].values
 
     # 데이터 정규화 (옵션 - 필요에 따라 사용하시면 됩니다.)
@@ -238,11 +240,11 @@ def predict_load_rf():
 
     # NaN인 load 값을 예측
     for i in range(len(df) - 24, len(df)):
-        input_data = df.loc[i, ['hour', 'workday']].values.reshape(1, -1)
+        input_data = df.loc[i, ['hour', 'minute', 'workday']].values.reshape(1, -1)
         input_data = scaler.transform(input_data)  # 정규화 (옵션)
         df.loc[i, 'load'] = model.predict(input_data)[0] * max(train_df['load'])  # 정규화 해제 및 저장
 
-    #df.to_csv('pred_load.csv')
+    df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
 
