@@ -1,5 +1,6 @@
 import datetime
 
+
 # mqtt config
 broker_url = 'lvdc.iptime.org'
 sub_topic = 'lvdc/ais'
@@ -35,7 +36,7 @@ period = 0.25 # 1 = 1hour, 0.5 = 30min, 0.25 = 15min
 workinghour_per_week = 40 # 주중 근무 시간
 static_discharge = ess_capacity * 0.8 / workinghour_per_week # 근무시간 당 방전량 20kW
 contract_power = 500 # 계약 용량 500kW
-peak_rate = 0.9 # 피크 전력의 90% ㅌ`ㅌ`
+peak_rate = 0.9 # 피크 전력의 90%
 peak_limit = contract_power/3 * peak_rate # 피크 제한치 150kW
 sunlight_scaling = 0.43 # 기상청 일사량 스케일링
 

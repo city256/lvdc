@@ -1,6 +1,7 @@
 import threading
 import db_fn
 import datetime
+from datetime import timedelta
 import time
 from selenium import webdriver
 import pandas as pd
@@ -247,7 +248,7 @@ def predict_load_rf():
     df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
-predict_load_rf()
+
 def predict_pv(df):
 
     # 'hour' 특성 추가
@@ -331,8 +332,8 @@ def crawling_pv():
     pred_pv['pv'] = np.nan
     db_pv = pd.concat([db_pv, pred_pv], ignore_index=True)
     # 테스트용 데이터 삽입
-    test_pd = pd.read_csv('pred_pv_test.csv')
-    predict_pv(test_pd).to_csv('pred_pv.csv')
+    #test_pd = pd.read_csv('pred_pv_test.csv')
+    predict_pv(db_pv).to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
     pass
 #crawling_pv()
@@ -347,12 +348,13 @@ def update_csv():
 
     load_proc.join()
     pv_proc.join()
-    print(datetime.datetime.now(),'- predict done : ', time.time() - start_time)
 
-    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    pv_date = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    load_date = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
-    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    predWL = float(round(load.loc[load['date'] == load_date, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == pv_date, 'sunlight'].iloc[0] / 4, 2))
     print('Load = ',predWL, ', PV = ',predWPV)
     pass
+

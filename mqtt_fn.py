@@ -9,7 +9,8 @@ mqttc = mqtt.Client()
 global p_index, pms_index
 p_index=0
 pms_index=0
-scaling_factor = 5
+test_scaling = 15
+time_scaling = 4
 
 def on_connect(client, userdata, flags, rc):
     # print("rc: " + str(rc))
@@ -66,23 +67,23 @@ def msg_handler(msg):
             if (split_msg[1].split('=')[0]=='operation_mode' and mode == 1): # 최적모드
                 pf = operation_mode.optimize_mode()
                 print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf/scaling_factor}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf * time_scaling / test_scaling}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 2): # 피크제어
                 limit = float(split_msg[2].split('=')[1])
                 pf = operation_mode.peak_mode(limit)
                 print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf/scaling_factor}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf * time_scaling / test_scaling}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 3): # 수요관리
                 pf = operation_mode.demand_mode()
                 print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf/scaling_factor}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf * time_scaling / test_scaling}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 4): # 태양광연계
                 pf = operation_mode.pv_mode()
                 print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf/scaling_factor}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf * time_scaling / test_scaling}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 5): # 수동제어
                 pf = float(split_msg[2].split('=')[1])

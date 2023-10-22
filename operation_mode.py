@@ -2,25 +2,27 @@ import config as cfg
 import datetime
 import pandas as pd
 import db_fn
+from datetime import timedelta
 
 def optimize_mode():
     # 예측된 부하량, 발전량 변수 가져오기
-    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    pv_date = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    load_date = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
-    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    predWL = float(round(load.loc[load['date'] == load_date, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == pv_date, 'sunlight'].iloc[0] / 4, 2))
     hour = datetime.datetime.now().hour
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
     wcnd = predWPV - predWL
 
-    #print('predL: {}, predPV: {}, soc: {}'.format(predWL, predWPV, soc))
-    #print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
+    print('predL: {}, predPV: {}, soc: {}'.format(predWL, predWPV, soc))
+    print('wcnd : {}, wsoc : {}({}%)'.format(round(wcnd,1), wsoc, soc))
 
     if wcnd < 0: # 방전, 음수
-        if 8 < hour < 19 and db_fn.check_date(datetime.datetime.now().date()):  # 근무일, 근무시간 9~18시 확인
+        if 8 < hour < 19 and db_fn.check_date(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:00')):  # 근무일, 근무시간 9~18시 확인
             if wsoc > cfg.min_capacity:  # wsoc가 soc_min + static Dis 이상인지 12% 이상인지
                 return max(-cfg.static_discharge, cfg.min_capacity - wsoc)
             else:
@@ -40,14 +42,16 @@ def optimize_mode():
         print('대기')
         return 0
 
+print(optimize_mode()/15)
 
 def peak_mode(limit):
     # 예측된 부하량, 발전량 변수 가져오기
-    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    pv_date = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    load_date = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
-    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    predWL = float(round(load.loc[load['date'] == load_date, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == pv_date, 'sunlight'].iloc[0] / 4, 2))
     hour = datetime.datetime.now().hour
 
     soc = db_fn.get_pms_soc()
@@ -74,14 +78,14 @@ def peak_mode(limit):
             return 0
 
 
-
 def demand_mode():
     # 예측된 부하량, 발전량 변수 가져오기
-    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    pv_date = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    load_date = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
-    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    predWL = float(round(load.loc[load['date'] == load_date, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == pv_date, 'sunlight'].iloc[0] / 4, 2))
     hour = datetime.datetime.now().hour
 
     soc = db_fn.get_pms_soc()
@@ -115,11 +119,12 @@ def demand_mode():
 
 def pv_mode():
     # 예측된 부하량, 발전량 변수 가져오기
-    date_str = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    pv_date = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
+    load_date = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M:00')
     pv = pd.read_csv('pred_pv.csv')
     load = pd.read_csv('pred_load.csv')
-    predWL = float(round(load.loc[load['date'] == date_str, 'load'].iloc[0], 2))
-    predWPV = float(round(pv.loc[pv['date'] == date_str, 'pv'].iloc[0], 2))
+    predWL = float(round(load.loc[load['date'] == load_date, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == pv_date, 'sunlight'].iloc[0] / 4, 2))
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
