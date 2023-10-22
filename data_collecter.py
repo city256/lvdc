@@ -153,11 +153,11 @@ def predict_load_lstm():
     model.fit(X, y, epochs=50, batch_size=32, verbose=1)
 
     # NaN인 load 값을 예측
-    for i in range(len(df) - 24, len(df)):
+    for i in range(len(df) - 96, len(df)):
         input_data = df.loc[i - n_past:i - 1, ['hour', 'minute', 'workday']].values
         input_data = scaler.transform(input_data)  # 정규화
-        predicted = model.predict(input_data.reshape(1, n_past, 2))  # reshape 및 예측
-        df.loc[i, 'load'] = predicted[0][0] * max(train_df['load'])  # 정규화 해제 및 저장
+        predicted = model.predict(input_data.reshape(1, n_past, 3))  # reshape 및 예측
+        df.loc[i, 'load'] = round(predicted[0][0] * max(train_df['load']), 2) # 정규화 해제 및 저장
     df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
@@ -200,9 +200,9 @@ def predict_load_xgb():
         input_data = df.loc[i, ['hour', 'minute', 'workday']].values.reshape(1, -1)
         input_data = scaler.transform(input_data)  # 정규화
         if df.loc[i, 'workday'] == 0:
-            df.loc[i, 'load'] = model.predict(input_data)[0] * max_load  # workday가 0일 때 다른 값을 설정
+            df.loc[i, 'load'] = round(model.predict(input_data)[0] * max(train_df['load']), 2)  # workday가 0일 때 다른 값을 설정
         else:
-            df.loc[i, 'load'] = model.predict(input_data)[0] * 75  # workday가 0이 아닐 때의 값
+            df.loc[i, 'load'] = round(model.predict(input_data)[0] * 75, 2)  # workday가 0이 아닐 때의 값
 
     df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
@@ -215,7 +215,7 @@ def predict_load_rf():
     start_time = time.time()
 
     # CSV 파일 로드
-    df = db_fn.get_load_data()
+    df = db_fn.get_load_data_15()
     df['date'] = pd.to_datetime(df['date'])
 
     # 데이터 전처리
@@ -239,15 +239,15 @@ def predict_load_rf():
     model.fit(features, labels)
 
     # NaN인 load 값을 예측
-    for i in range(len(df) - 24, len(df)):
+    for i in range(len(df) - 96, len(df)):
         input_data = df.loc[i, ['hour', 'minute', 'workday']].values.reshape(1, -1)
         input_data = scaler.transform(input_data)  # 정규화 (옵션)
-        df.loc[i, 'load'] = model.predict(input_data)[0] * max(train_df['load'])  # 정규화 해제 및 저장
+        df.loc[i, 'load'] = round(model.predict(input_data)[0] * max(train_df['load']), 2)  # 정규화 해제 및 저장
 
     df.to_csv('pred_load.csv')
     print('load done : ', time.time() - start_time)
     pass
-
+predict_load_rf()
 def predict_pv(df):
 
     # 'hour' 특성 추가
