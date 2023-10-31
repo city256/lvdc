@@ -349,12 +349,4 @@ def update_csv():
     load_proc.join()
     pv_proc.join()
 
-    pv_date = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
-    load_date = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M:00')
-    pv = pd.read_csv('pred_pv.csv')
-    load = pd.read_csv('pred_load.csv')
-    predWL = float(round(load.loc[load['date'] == load_date, 'load'].iloc[0], 2))
-    predWPV = float(round(pv.loc[pv['date'] == pv_date, 'sunlight'].iloc[0] / 4, 2))
-    print('Load = ',predWL, ', PV = ',predWPV)
     pass
-

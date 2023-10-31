@@ -66,14 +66,14 @@ def msg_handler(msg):
             # msg type 별 처리
             if (split_msg[1].split('=')[0]=='operation_mode' and mode == 1): # 최적모드
                 pf = operation_mode.optimize_mode()
-                print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf * time_scaling / test_scaling}'
+                print('pf = ', pf * time_scaling / test_scaling)
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={round(pf * time_scaling / test_scaling,2)}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 2): # 피크제어
                 limit = float(split_msg[2].split('=')[1])
                 pf = operation_mode.peak_mode(limit)
-                print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf * time_scaling / test_scaling}'
+                print('pf = ', pf * time_scaling / test_scaling)
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={round(pf * time_scaling / test_scaling,2)}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 3): # 수요관리
                 pf = operation_mode.demand_mode()
