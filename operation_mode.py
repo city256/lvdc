@@ -108,7 +108,6 @@ def peak_mode(limit):
         else:   # 피크 초과 안할시
             return 0
 
-print(peak_mode(0))
 
 '''
     if workday:
@@ -134,6 +133,8 @@ print(peak_mode(0))
 '''
 
 def demand_mode():
+
+    '''
     # 예측된 부하량, 발전량 변수 가져오기
     pv_date = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
     load_date = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M:00')
@@ -142,6 +143,18 @@ def demand_mode():
     predWL = float(round(load.loc[load['date'] == load_date, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == pv_date, 'pv'].iloc[0] / 4, 2))
     hour = datetime.datetime.now().hour
+    '''
+
+    # 예측된 부하량, 발전량 변수 가져오기
+    #test_date = datetime.datetime.strptime('2023-10-23 10:45:00','%Y-%m-%d %H:%M:00')
+    test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
+    pv = pd.read_csv('test_pv(demand).csv', parse_dates=['date'])
+    load = pd.read_csv('test_load(demand).csv', parse_dates=['date'])
+    predWL = float(round(load.loc[load['date'] == test_date, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == test_date, 'pv'].iloc[0], 2))
+    hour = int(load.loc[load['date'] == test_date, 'hour'].iloc[0])
+    workday = int(load.loc[load['date'] == test_date, 'workday'].iloc[0])
+    print('predL: {}, predPV: {}'.format(predWL, predWPV))
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
@@ -173,6 +186,7 @@ def demand_mode():
 
 
 def pv_mode():
+    '''
     # 예측된 부하량, 발전량 변수 가져오기
     pv_date = (datetime.datetime.now()).strftime('%Y-%m-%d %H:00:00')
     load_date = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M:00')
@@ -181,6 +195,18 @@ def pv_mode():
     predWL = float(round(load.loc[load['date'] == load_date, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == pv_date, 'pv'].iloc[0] / 4, 2))
     hour = datetime.datetime.now().hour
+    '''
+
+    # 예측된 부하량, 발전량 변수 가져오기
+    #test_date = datetime.datetime.strptime('2023-10-23 10:45:00','%Y-%m-%d %H:%M:00')
+    test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
+    pv = pd.read_csv('test_pv(pv).csv', parse_dates=['date'])
+    load = pd.read_csv('test_load(pv).csv', parse_dates=['date'])
+    predWL = float(round(load.loc[load['date'] == test_date, 'load'].iloc[0], 2))
+    predWPV = float(round(pv.loc[pv['date'] == test_date, 'pv'].iloc[0], 2))
+    hour = int(load.loc[load['date'] == test_date, 'hour'].iloc[0])
+    workday = int(load.loc[load['date'] == test_date, 'workday'].iloc[0])
+    print('predL: {}, predPV: {}'.format(predWL, predWPV))
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
