@@ -75,7 +75,6 @@ def optimize_mode():
 
 def peak_mode(limit):
     # 예측된 부하량, 발전량 변수 가져오기
-    #test_date = datetime.datetime.strptime('2023-10-23 10:45:00','%Y-%m-%d %H:%M:00')
     test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
     pv = pd.read_csv('test_pv.csv', parse_dates=['date'])
     load = pd.read_csv('test_load.csv', parse_dates=['date'])
@@ -107,7 +106,6 @@ def peak_mode(limit):
                 return 0
         else:   # 피크 초과 안할시
             return 0
-
 
 '''
     if workday:
@@ -146,15 +144,15 @@ def demand_mode():
     '''
 
     # 예측된 부하량, 발전량 변수 가져오기
-    #test_date = datetime.datetime.strptime('2023-10-23 10:45:00','%Y-%m-%d %H:%M:00')
     test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
+    #test_date = datetime.datetime.strptime('2023-11-02 11:30:00', '%Y-%m-%d %H:%M:00')
     pv = pd.read_csv('test_pv(demand).csv', parse_dates=['date'])
     load = pd.read_csv('test_load(demand).csv', parse_dates=['date'])
     predWL = float(round(load.loc[load['date'] == test_date, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == test_date, 'pv'].iloc[0], 2))
     hour = int(load.loc[load['date'] == test_date, 'hour'].iloc[0])
     workday = int(load.loc[load['date'] == test_date, 'workday'].iloc[0])
-    print('predL: {}, predPV: {}'.format(predWL, predWPV))
+    print('hour/workday : {}/{}, predL: {}, predPV: {}'.format(hour, workday, predWL, predWPV))
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
@@ -165,7 +163,7 @@ def demand_mode():
 
     if 22 <= hour or hour < 8:  # 충전 22시 ~ 08시 (경부하)
         if cfg.max_capacity > wsoc : # soc 90% 초과 방지
-            return min(cfg.max_capacity - wsoc, cfg.conv_capacity_1h) # 경부하시간대 충전량 결정
+            return min(cfg.max_capacity - wsoc, 150) # 경부하시간대 충전량 결정
         else:          # soc 90% 이상 충전 불가능
             return 0
     elif 11 == hour or 13 <= hour < 18:   # 방전 11~12시, 13~18시 (최대부하)
@@ -176,13 +174,19 @@ def demand_mode():
                 return 0
         elif wcnd > 0: # 충전, 양수
             if cfg.max_capacity > wsoc :  # soc 90% 초과 방지
-                return min(wcnd, cfg.conv_capacity_1h, cfg.max_capacity - wsoc)  # 충전량 결정
+                return min(wcnd, 150, cfg.max_capacity - wsoc)  # 충전량 결정
             else:  # soc 90% 이상 충전 불가능
                 return 0
         else:
             return 0
     else:   # 대기 08~11시, 12~13시, 18~22시 (중간부하)
-        return 0
+        if wcnd > 0:  # 충전, 양수
+            if cfg.max_capacity > wsoc:  # soc 90% 초과 방지
+                return min(wcnd, 150, cfg.max_capacity - wsoc)  # 충전량 결정
+            else:  # soc 90% 이상 충전 불가능
+                return 0
+        else:
+            return 0
 
 
 def pv_mode():
@@ -198,15 +202,15 @@ def pv_mode():
     '''
 
     # 예측된 부하량, 발전량 변수 가져오기
-    #test_date = datetime.datetime.strptime('2023-10-23 10:45:00','%Y-%m-%d %H:%M:00')
     test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
+    #test_date = datetime.datetime.strptime('2023-11-03 17:45:00', '%Y-%m-%d %H:%M:00')
     pv = pd.read_csv('test_pv(pv).csv', parse_dates=['date'])
     load = pd.read_csv('test_load(pv).csv', parse_dates=['date'])
     predWL = float(round(load.loc[load['date'] == test_date, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == test_date, 'pv'].iloc[0], 2))
     hour = int(load.loc[load['date'] == test_date, 'hour'].iloc[0])
     workday = int(load.loc[load['date'] == test_date, 'workday'].iloc[0])
-    print('predL: {}, predPV: {}'.format(predWL, predWPV))
+    print('hour/workday : {}/{}, predL: {}, predPV: {}'.format(hour, workday, predWL, predWPV))
 
     soc = db_fn.get_pms_soc()
     wsoc = cfg.ess_capacity * (soc * 0.01)
@@ -237,3 +241,4 @@ def pv_mode():
                 return 0
         else:   # 방전 불가능 soc 10% 미만
             return 0
+

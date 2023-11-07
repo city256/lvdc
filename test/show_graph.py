@@ -21,18 +21,18 @@ def sum_data(data, start_time, end_time):
 
 # CSV 파일 읽기
 #data = pd.read_csv('../pqms_data.csv', parse_dates=['date'])
-data = pd.read_csv('../pqms_data_peak.csv', parse_dates=['date'])
+data = pd.read_csv('../pqms_data_pv.csv', parse_dates=['date'])
 
 # datetime 컬럼을 인덱스로 설정
 data.set_index('date', inplace=True)
 
 # 특정 기간 동안의 데이터만 필터링 (예: '2022-01-01'부터 '2022-12-31'까지)
-filtered_data = data['2023-10-23 10:00:00':'2023-10-23 18:00:00']
+filtered_data = data['2023-11-03 10:00:00':'2023-11-03 18:00:00']
 
 #sum_data(data, '2023-10-23 09:00:00', '2023-10-23 17:00:00')
 # 데이터를 시간별로 그룹화하고 평균값을 계산
 #filtered_data = filtered_data.resample('H').mean()
-sum_data(data, '2023-10-24 15:45:00', '2023-10-24 16:45:00')
+#sum_data(data, '2023-11-02 10:00:00', '2023-11-03 18:00:00')
 
 # 각 컬럼의 값을 가져옴
 acdc = filtered_data['acdc']

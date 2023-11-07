@@ -78,12 +78,12 @@ def msg_handler(msg):
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 3): # 수요관리
                 pf = operation_mode.demand_mode()
                 print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf * time_scaling / test_scaling}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={round(pf * time_scaling / test_scaling,2)}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 4): # 태양광연계
                 pf = operation_mode.pv_mode()
                 print('pf = ', pf)
-                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={pf * time_scaling / test_scaling}'
+                pub_msg = f'set?p_index={p_index}&operation_mode={mode}&power_reference={round(pf * time_scaling / test_scaling,2)}'
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             elif (split_msg[1].split('=')[0]=='operation_mode' and mode == 5): # 수동제어
                 pf = float(split_msg[2].split('=')[1])

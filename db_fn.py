@@ -207,11 +207,11 @@ def get_pqms_data_15():
     cur.execute(query)
     resultset = cur.fetchall()
     result = pd.DataFrame(resultset, columns=['date', 'acdc', 'load', 'pv', 'ess_charge', 'ess_discharge', 'workday'])
-    result.to_csv('pqms_data_peak.csv')
+    result.to_csv('pqms_data_pv.csv')
     conn.commit()
     conn.close()
     return result
-get_pqms_data_15()
+#get_pqms_data_15()
 
 def get_pqms_data_origin():
     conn = conn_db()
@@ -238,7 +238,6 @@ def get_pqms_data_origin():
     conn.commit()
     conn.close()
     return result
-get_pqms_data_origin()
 
 def check_date(date_str):
 
