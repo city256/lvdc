@@ -1,45 +1,63 @@
-# ESS 충방전 알고리즘
-LVDC 마이크로그리드 ESS연계모드 개발
+# 1. LVDC 마이크로그리드 ESS 충방전 스케쥴링 시스템 
+
+* 이 프로젝트는 직류수용가용 DC 마이크로그리드에서 에너지 저장 시스템(ESS)의 충방전 스케줄링 기능을 구현한 것으로 융합표준연구실에서 개발한 SW입니다.
+* 주요 기능은 다음과 같습니다.
+* ESS - EMS 간 MQTT 연동
+* LSTM, Random Forest, XGBoost 모델을 이용한 전력 사용량 예측 
+* 웹 크롤링한 기상청 날씨 정보 기반 태양광 발전량 예측
+* 4가지(기본모드, 피크제어, 수요관리, 태양광연계) 충방전 모드별 전력지령치 계산 
+* 테스트용 데모 PMS 시뮬레이터 제공 
+* PQMS 히스토리 데이터 시각화
 
 
-# 1. 운영모드 #
+## 1.1 Table of Contents
+- [Environment & Prerequisites](#environment-and-prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Authors](#authors)
 
 ---
-모든 운영모드들은 태양광이 연계됨
 
-모든 운영모드 함수의 모든 리턴값은 Power Reference 값을 반환함
+# 2. 설치 방법
+## 2.1 Environment and Prerequisites
 
-### 1.1 기본모드 
-충전 : 발전량 > 부하량 일경우, 발전량 - 부하량 만큼 충전
-
-방전 : 근무 시간마다, ESS 가용용량(800kW) / 주중 근무시간(40) = 20kW 씩 방전
-
-### 1.2 피크제어 모드
-계통 사용량이 계약 용량의 1/3인 피크치를 넘지 않도록 ESS를 충방전하는 모드.
-
-나주 테스트베드 기준 계약용량 500kW / 3 = 170kW에서 피크치의 90%(150kW) 까지 Peak Shaving 하는 모드이다.
-
-충전 : 경부하시간(22~08시)에 계통사용량이 피크치의 90%를 넘지 않게 충전
-방전 : 경부하시간외에 피크치의 90%이상으로 계통사용량이 예측될 경우 피크치의 90% 이하 만큼 ESS 방전
-
-### 1.3 수요관리 모드
-수요관리(DSM, Demand Side Management)란? 최소의 비용으로 소비자의 전기에너지 서비스 욕구를 충족시키기 위하여 소비자의 전기사용 패턴을 합리적인 방향으로 유도하기 위한 전력회사의 제반활동이라고 정의하고 있다.
-
-한전에서 정의한 부하시간대 별로 ESS를 충전, 방전, 대기
-
-#### 경부하 시간대(22~08시)
-충전 : 150kW로 충전
-
-#### 중간부하 시간대(09~11시, 12~13시, 18~22시)
-충전 : 발전량 > 부하량 일경우, 발전량 - 부하량 만큼 충전
-
-#### 최대부하 시간대(11~12시, 13~18시)
-방전 : 발전량 < 부하량 일경우, 발전량 - 부하량 만큼 방전
-
-충전 : 발전량 > 부하량 일경우, 발전량 - 부하량 만큼 충전
-
-### 1.4 태양광연계 모드
+- 개발언어:  Python
+- OS:  Windows 10 / Ubuntu
+- Protocol:  MQTT
+- DB:  MariaDB
 
 
+## 2.2 Installation 
 
-Pandas, pymysql, paho-MQTT 활용 
+- 소스코드를 다운로드 받거나 git 명령어를 통해 소스코드를 다운받습니다. 
+
+```bash
+    git clone https://github.com/city256/lvdc.git
+```
+
+---
+
+# 3. Usage 
+
+- 다운받은 소스코드의 루트 디렉토리에서 main.py를 실행시킵니다.
+
+```bash
+    python3 main.py
+```
+
+- PMS 데모 프로그램 실행 방법
+
+```bash
+    python3 test/pms_demo.py
+```
+
+---
+
+# 4. Authors
+
+* 정상우  jsw256@etri.re.kr
+* 안윤영  yyahn@etri.re.kr
+* 김성혜  shkim@etri.re.kr
+
+
+
