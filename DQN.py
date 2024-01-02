@@ -4,6 +4,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from collections import deque
+import pandas as pd
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
@@ -56,10 +57,10 @@ class DQNAgent:
         self.model.save_weights(name)
 
 
-
+data = pd.read_csv('pqms_data.csv')
 # EMS 시뮬레이션 환경
 class EMSEnvironment:
-    def __init__(self):
+    def __init__(self, data):
         self.index = 0  # 인덱스
         self.state_of_charge = 50  # SOC 초기값
         self.load = 0  # 현재 부하
@@ -77,6 +78,7 @@ class EMSEnvironment:
     def step(self, action):
         # 여기에 실제 시스템에 대한 행동의 영향을 계산하는 로직을 구현합니다.
         # 예: action이 -250 ~ -1이면 방전, 1 ~ 250이면 충전, 0이면 대기
+
         done = False
         reward = 0  # 보상 함수를 구현합니다.
         # 보상함수는 전기세로 grid * price가 가장 작은 값
