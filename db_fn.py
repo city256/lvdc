@@ -412,3 +412,4 @@ def get_pms_soc():
     conn.commit()
     conn.close()
     return resultset[0][0]
+

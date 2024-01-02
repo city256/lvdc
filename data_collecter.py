@@ -337,6 +337,7 @@ def crawling_pv():
     print('pv done : ', time.time() - start)
     pass
 #crawling_pv()
+#predict_load_xgb()
 def update_csv():
     print(datetime.datetime.now(),'- start predict')
     start_time = time.time()
