@@ -351,3 +351,5 @@ def update_csv():
     pv_proc.join()
 
     pass
+
+update_csv()
