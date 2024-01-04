@@ -1,7 +1,6 @@
 import datetime
 import random
 import numpy as np
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from collections import deque
@@ -42,80 +41,11 @@ def calculate_price(datetime_str):
         else:  # 최대부하
             return 147.2
 
-class DQNAgent:
-    def __init__(self, state_size, action_size):
-        self.state_size = state_size
-        self.action_size = action_size
-        self.memory = deque(maxlen=1000)
-        self.gamma = 0.95  # discount rate
-        self.epsilon = 1.0  # exploration rate
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
-        self.learning_rate = 0.001
-        self.model = self._build_model()
-
-    def _build_model(self):
-        model = Sequential()
-        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
-        model.add(Dense(24, activation='relu'))
-        model.add(Dense(self.action_size, activation='linear'))
-        model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
-        return model
-
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
-
-    def act(self, state):
-        current_grid = state[0][1] - state[0][2]  # 현재 그리드 사용량 계산
-        current_soc = state[0][0]  # 현재 SOC
-
-        # SOC에 따른 유효한 행동 결정
-        if current_soc <= 10:
-            valid_actions = [i for i in range(251)]  # 충전만 가능 (0 ~ 250)
-        elif current_soc >= 90:
-            valid_actions = [i for i in range(-250, 1)]  # 방전만 가능 (-250 ~ 0)
-        else:
-            valid_actions = [i for i in range(-250, 251)]  # 모든 행동 가능
-
-        # grid 제약 조건 적용
-        valid_actions = [action for action in valid_actions if action <= current_grid * 4]
-
-        if not valid_actions:  # 유효한 행동이 없는 경우
-            return 0  # 대기 행동을 반환
-
-        if np.random.rand() <= self.epsilon:
-            return random.choice(valid_actions)  # 탐험
-        else:
-            act_values = self.model.predict(state)
-            # 유효한 행동들 중에서 최대 Q 값을 가지는 행동을 선택
-            return max(valid_actions, key=lambda x: act_values[0][x + 250])
-
-    def replay(self, batch_size):
-        minibatch = random.sample(self.memory, batch_size)
-        for state, action, reward, next_state, done in minibatch:
-            target = reward
-            if not done:
-                target = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
-            target_f = self.model.predict(state)
-            target_f[0][action] = target
-            self.model.fit(state, target_f, epochs=1, verbose=0)
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-
-    def load(self, name):
-        self.model.load_weights(name)
-
-
-    def save(self, name):
-        #self.model.save_weights(name)
-        self.model.save(name)
-
-# EMS 시뮬레이션 환경
 class EMSEnvironment:
     def __init__(self, data):
         self.data = data
-        self.current_time = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M')
         self.current_index = 0
+        self.current_time = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M')
         self.max_index = 0
         self.price = calculate_price(self.current_time)
         self.soc = 50
@@ -124,9 +54,9 @@ class EMSEnvironment:
         # 다른 필요한 변수들을 추가할 수 있습니다.
 
     def reset(self):
-        self.max_index = len(self.data)
         self.current_index = 0
-        self.current_time = self.data.iloc[self.current_index]['date']
+        self.max_index = len(self.data)
+        self.current_time = self.current_time = self.data.iloc[self.current_index]['date']
         self.price = calculate_price(self.current_time)
         self.sum_discharge=0
         self.sum_charge = 0
@@ -177,34 +107,6 @@ class EMSEnvironment:
         return next_state, reward, done
 
 
-'''
-# DQN 에이전트와 EMS 환경 초기화
-training_data = pd.read_csv('test/merged_data.csv')
-state_size = 4  # 상태 크기 (SOC, Load, PV, Price)
-action_size = 501  # 행동 크기 (-250 ~ 250)
-agent = DQNAgent(state_size, action_size)
-env = EMSEnvironment(training_data)
-'''
-
-'''
-# 학습 루프
-for e in range(20):  # 에피소드 수
-    print('episode = ', e)
-    state = env.reset()
-    state = np.reshape(state, [1, state_size])
-    for time in range(96):  # 한 에피소드의 최대 길이
-        #print('time index = ', time, 'state= ', state, 'index=', env.current_index, env.load, env.pv)
-        action = agent.act(state)  # 행동 선택 및 조정
-        next_state, reward, done = env.step(action)
-        next_state = np.reshape(next_state, [1, state_size])
-        agent.remember(state, action, reward, next_state, done)
-        state = next_state
-        if done:
-            print(f"에피소드: {e}/{1000}, 시간: {time}, 보상: {env.sum_fee}, 충전: {env.sum_charge}, 방전: {env.sum_discharge}, soc: {env.soc}, grid: {env.sum_grid}")
-            break
-        if len(agent.memory) > 32:
-            agent.replay(32)
-'''
 model_save_path = 'dqn_model.h5'
 #agent.save(model_save_path)
 
