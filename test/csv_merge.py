@@ -23,4 +23,4 @@ expanded_hourly_df = pd.DataFrame(rows)
 merged_df = pd.merge(quarter_hourly_df, expanded_hourly_df, on='date', how='left')
 
 # 결과를 새로운 CSV 파일로 저장
-merged_df.to_csv('merged_data.csv', index=False)
+merged_df.to_csv('load_pv.csv', index=False)

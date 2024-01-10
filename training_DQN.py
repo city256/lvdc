@@ -9,12 +9,14 @@ from datetime import timedelta
 import db_fn
 from tensorflow.keras.models import load_model
 import pandas as pd
+import time
 
 total_episodes = 100
 batch_size = 32
 start_time = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M')
 
 
+# 한전 계시별 요금표 (산업용 을 선택2)
 def calculate_price(datetime_str):
     dt = datetime.datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
     month = dt.month
@@ -173,27 +175,24 @@ class EMSEnvironment:
         # 에피소드 종료 조건을 체크합니다 (예: 24시간을 넘어갔을때)
         if self.current_index >= self.max_index - 1:
             done = True
-        print(f'grid= {grid}, load= {self.load}, pv= {self.pv}, charge= {charge}/{discharge}, soc= {self.soc}%')
+        #print(f'grid= {grid}, load= {self.load}, pv= {self.pv}, charge= {charge}/{discharge}, soc= {self.soc}%')
         return next_state, reward, done
 
 
-'''
+
 # DQN 에이전트와 EMS 환경 초기화
 training_data = pd.read_csv('test/merged_data.csv')
 state_size = 4  # 상태 크기 (SOC, Load, PV, Price)
 action_size = 501  # 행동 크기 (-250 ~ 250)
 agent = DQNAgent(state_size, action_size)
 env = EMSEnvironment(training_data)
-'''
 
-'''
 # 학습 루프
 for e in range(20):  # 에피소드 수
     print('episode = ', e)
     state = env.reset()
     state = np.reshape(state, [1, state_size])
-    for time in range(96):  # 한 에피소드의 최대 길이
-        #print('time index = ', time, 'state= ', state, 'index=', env.current_index, env.load, env.pv)
+    for time in range(env.max_index):  # 한 에피소드의 최대 길이
         action = agent.act(state)  # 행동 선택 및 조정
         next_state, reward, done = env.step(action)
         next_state = np.reshape(next_state, [1, state_size])
@@ -204,10 +203,11 @@ for e in range(20):  # 에피소드 수
             break
         if len(agent.memory) > 32:
             agent.replay(32)
-'''
-model_save_path = 'dqn_model.h5'
-#agent.save(model_save_path)
 
+model_save_path = 'dqn_model.h5'
+agent.save(model_save_path)
+
+'''
 # 모델 불러오기
 model = load_model(model_save_path)
 
@@ -245,3 +245,4 @@ for index, row in new_data.iterrows():
 # 결과를 DataFrame으로 변환
 results_df = pd.DataFrame(results)
 print(results_df)
+'''
