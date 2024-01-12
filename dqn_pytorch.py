@@ -102,7 +102,7 @@ model.load_state_dict(torch.load('dqn_model.pth'))
 model.eval()
 
 # 데이터 로드
-data = pd.read_csv('pqms_data.csv')
+data = pd.read_csv('csv/pqms_data.csv')
 
 # 액션 예측 및 결과 저장
 actions = []

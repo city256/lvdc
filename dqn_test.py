@@ -114,7 +114,7 @@ model_save_path = 'dqn_model.h5'
 model = load_model(model_save_path)
 
 # 새로운 데이터 파일 로드
-new_data_file = 'pqms_data_15_dqn.csv'
+new_data_file = 'csv/pqms_data_15_dqn.csv'
 new_data = pd.read_csv(new_data_file)
 
 # 상태 크기 정의 (SOC, Load, PV, Price)

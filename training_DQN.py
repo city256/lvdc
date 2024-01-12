@@ -11,7 +11,7 @@ from tensorflow.keras.models import load_model
 import pandas as pd
 import time
 
-total_episodes = 100
+total_episodes = 20
 batch_size = 32
 start_time = (datetime.datetime.now() + timedelta(minutes=(15 - datetime.datetime.now().minute % 15))).strftime('%Y-%m-%d %H:%M')
 
@@ -181,14 +181,14 @@ class EMSEnvironment:
 
 
 # DQN 에이전트와 EMS 환경 초기화
-training_data = pd.read_csv('test/merged_data.csv')
+training_data = pd.read_csv('csv/merged_data.csv')
 state_size = 4  # 상태 크기 (SOC, Load, PV, Price)
 action_size = 501  # 행동 크기 (-250 ~ 250)
 agent = DQNAgent(state_size, action_size)
 env = EMSEnvironment(training_data)
 
 # 학습 루프
-for e in range(20):  # 에피소드 수
+for e in range(total_episodes):  # 에피소드 수
     print('episode = ', e)
     state = env.reset()
     state = np.reshape(state, [1, state_size])
@@ -207,8 +207,12 @@ for e in range(20):  # 에피소드 수
 model_save_path = 'dqn_model.h5'
 agent.save(model_save_path)
 
+
+
+
 '''
 # 모델 불러오기
+model_save_path = 'dqn_model.h5'
 model = load_model(model_save_path)
 
 # 새로운 데이터 파일 로드
@@ -223,7 +227,7 @@ results = []
 
 # 초기 SOC 값 설정
 soc = 50  # 예시 값, 실제 초기 SOC에 따라 조정 필요
-
+start = time.time()
 for index, row in new_data.iterrows():
     # 현재 상태 생성
     load = row['load']  # 'load' 컬럼
@@ -237,7 +241,7 @@ for index, row in new_data.iterrows():
 
     # SOC 업데이트 (실제 시스템에 따라 조정 필요)
     soc += (action / 4) * 0.1  # 예시: 행동에 따라 SOC 업데이트
-    soc = max(0, min(100, soc))  # SOC를 0과 100 사이로 제한
+    soc = max(0, min(100, soc))  # SoC를 0과 100 사이로 제한
 
     # 결과 저장
     results.append({'index': index, 'date': row['date'], 'soc': soc, 'action': action})
@@ -245,4 +249,5 @@ for index, row in new_data.iterrows():
 # 결과를 DataFrame으로 변환
 results_df = pd.DataFrame(results)
 print(results_df)
+print(f'걸린 시간 : {time.time() - start}')
 '''
