@@ -172,7 +172,6 @@ def predict_load_xgb():
 
     # CSV 파일 로드
     df = db_fn.get_load_data_15()
-    #df = pd.read_csv('pred_load_test.csv')
     df['date'] = pd.to_datetime(df['date'])
 
     # 데이터 전처리
@@ -352,4 +351,3 @@ def update_csv():
 
     pass
 
-update_csv()

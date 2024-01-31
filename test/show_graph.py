@@ -6,28 +6,27 @@ def sum_data(data, start_time, end_time):
     print(filtered_data)
 
     # "acdc" 열의 합을 계산합니다.
-    sum_acdc =filtered_data['acdc'].sum()
-    sum_load= filtered_data['load'].sum()
-    sum_pv= filtered_data['pv'].sum()
+    sum_acdc = filtered_data['acdc'].sum()
+    sum_load = filtered_data['load'].sum()
+    sum_pv = filtered_data['pv'].sum()
     sum_charge = filtered_data['ess_charge'].sum()
     sum_discharge = filtered_data['ess_discharge'].sum()
-    print('ACDC = ',sum_acdc)
-    print('Load = ',sum_load)
-    print('PV = ',sum_pv)
+    print('ACDC = ', sum_acdc)
+    print('Load = ', sum_load)
+    print('PV = ', sum_pv)
     print('cha = ', sum_charge)
     print('dis = ', sum_discharge)
 
     return
 
 # CSV 파일 읽기
-#data = pd.read_csv('../pqms_data.csv', parse_dates=['date'])
-data = pd.read_csv('../pqms_data_pv.csv', parse_dates=['date'])
+data = pd.read_csv('../csv/pqms_data_peak.csv', parse_dates=['date'])
 
 # datetime 컬럼을 인덱스로 설정
 data.set_index('date', inplace=True)
 
 # 특정 기간 동안의 데이터만 필터링 (예: '2022-01-01'부터 '2022-12-31'까지)
-filtered_data = data['2023-11-03 10:00:00':'2023-11-03 18:00:00']
+filtered_data = data['2023-10-24 10:00:00':'2023-10-24 18:00:00']
 
 #sum_data(data, '2023-10-23 09:00:00', '2023-10-23 17:00:00')
 # 데이터를 시간별로 그룹화하고 평균값을 계산

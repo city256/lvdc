@@ -21,8 +21,8 @@ def optimize_mode():
 
 
     test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
-    pv = pd.read_csv('test_pv.csv', parse_dates=['date'])
-    load = pd.read_csv('test_load.csv', parse_dates=['date'])
+    pv = pd.read_csv('csv/test_pv.csv', parse_dates=['date'])
+    load = pd.read_csv('csv/test_load.csv', parse_dates=['date'])
     predWL = float(round(load.loc[load['date'] == test_date, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == test_date, 'pv'].iloc[0], 2))
     hour = int(load.loc[load['date'] == test_date, 'hour'].iloc[0])
@@ -76,8 +76,8 @@ def optimize_mode():
 def peak_mode(limit):
     # 예측된 부하량, 발전량 변수 가져오기
     test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
-    pv = pd.read_csv('test_pv.csv', parse_dates=['date'])
-    load = pd.read_csv('test_load.csv', parse_dates=['date'])
+    pv = pd.read_csv('csv/test_pv.csv', parse_dates=['date'])
+    load = pd.read_csv('csv/test_load.csv', parse_dates=['date'])
     predWL = float(round(load.loc[load['date'] == test_date, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == test_date, 'pv'].iloc[0], 2))
     hour = int(load.loc[load['date'] == test_date, 'hour'].iloc[0])
@@ -146,8 +146,8 @@ def demand_mode():
     # 예측된 부하량, 발전량 변수 가져오기
     test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
     #test_date = datetime.datetime.strptime('2023-11-02 11:30:00', '%Y-%m-%d %H:%M:00')
-    pv = pd.read_csv('test_pv(demand).csv', parse_dates=['date'])
-    load = pd.read_csv('test_load(demand).csv', parse_dates=['date'])
+    pv = pd.read_csv('csv/test_pv(demand).csv', parse_dates=['date'])
+    load = pd.read_csv('csv/test_load(demand).csv', parse_dates=['date'])
     predWL = float(round(load.loc[load['date'] == test_date, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == test_date, 'pv'].iloc[0], 2))
     hour = int(load.loc[load['date'] == test_date, 'hour'].iloc[0])
@@ -204,8 +204,8 @@ def pv_mode():
     # 예측된 부하량, 발전량 변수 가져오기
     test_date = (datetime.datetime.now() - timedelta(minutes=datetime.datetime.now().minute % 15)).strftime('%Y-%m-%d %H:%M:00')
     #test_date = datetime.datetime.strptime('2023-11-03 17:45:00', '%Y-%m-%d %H:%M:00')
-    pv = pd.read_csv('test_pv(pv).csv', parse_dates=['date'])
-    load = pd.read_csv('test_load(pv).csv', parse_dates=['date'])
+    pv = pd.read_csv('csv/test_pv(pv).csv', parse_dates=['date'])
+    load = pd.read_csv('csv/test_load(pv).csv', parse_dates=['date'])
     predWL = float(round(load.loc[load['date'] == test_date, 'load'].iloc[0], 2))
     predWPV = float(round(pv.loc[pv['date'] == test_date, 'pv'].iloc[0], 2))
     hour = int(load.loc[load['date'] == test_date, 'hour'].iloc[0])

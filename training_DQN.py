@@ -202,7 +202,7 @@ model_save_path = 'dqn_model.h5'
 #agent.save(model_save_path)
 model = load_model(model_save_path)
 
-simulation_file = 'pqms_data_15_dqn.csv'
+simulation_file = 'csv/pqms_data_15_dqn.csv'
 sim_data = pd.read_csv(simulation_file)
 
 

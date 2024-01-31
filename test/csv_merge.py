@@ -1,8 +1,8 @@
 import pandas as pd
 
 # CSV 파일 로드
-quarter_hourly_df = pd.read_csv('../pred_load.csv')  # 15분 주기 데이터
-hourly_df = pd.read_csv('../pred_pv.csv')                  # 1시간 주기 데이터
+quarter_hourly_df = pd.read_csv('../csv/pred_load.csv')  # 15분 주기 데이터
+hourly_df = pd.read_csv('../csv/pred_pv.csv')                  # 1시간 주기 데이터
 
 # datetime 열을 datetime 객체로 변환
 quarter_hourly_df['date'] = pd.to_datetime(quarter_hourly_df['date'])

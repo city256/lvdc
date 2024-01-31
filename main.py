@@ -19,7 +19,7 @@ if __name__ == '__main__':
     #schedule.every(10).minutes.at(":30").do(dc.update_csv)
 
     # init : 프로그램 시작시 예측 돌리는 변수 (0: 시작시 예측 / 1: 시작시 예측 안함)
-    init = 0
+    init = 1
     # 스케쥴링 루프문
     while True:
         if init==0:
