@@ -45,12 +45,6 @@ def msg_handler(msg):
     msg_str = msg_str.replace("\\n", "")
     msg_str = msg_str.replace("\\t", "")
 
-    try:
-        msg_json = json.loads(msg_str, strict=False) # payload json 처리
-        print("json msg received")
-    except json.JSONDecodeError as e:
-        print(f"msg not json format: {e}")
-
     # set 명령어 처리
     if (msg_str[0:3]=="set"):
         global p_index
@@ -98,25 +92,37 @@ def msg_handler(msg):
                 mqttc.publish(cfg.pub_pms_topic, pub_msg)
             else:
                 print("Unknown operation_mode msg")
+            pass
         else:
             print('Ignore Index Msg')
+            pass
 
-    # pms set response 처리
-    elif msg_json['p_type'] == 'set':
-        if msg_json['p_cmd'] == 'response/operation_mode':
-            mqttc.publish(cfg.pub_ems_topic, msg_str)
-        elif msg_json['p_cmd'] == 'response/operation_state':
-            mqttc.publish(cfg.pub_ems_topic, msg_str)
-        else :
-            print(f'Unknown Response Msg= {msg_json}')
+    try:
+        msg_json = json.loads(msg_str, strict=False)  # payload json 처리
+        print("json msg received")
+
+        # pms set response 처리
+        if msg_json['p_type'] == 'set':
+            if msg_json['p_cmd'] == 'response/operation_mode':
+                mqttc.publish(cfg.pub_ems_topic, msg_str)
+            elif msg_json['p_cmd'] == 'response/operation_state':
+                mqttc.publish(cfg.pub_ems_topic, msg_str)
+            else:
+                print(f'Unknown Response Msg= {msg_json}')
+            pass
+
+        # pms get response 처리
+        elif (msg_json['p_type'] == 'get' and msg_json['p_cmd'] == 'response/soc_report'):
+            print(cfg.soc_index)
+            print(f'get Response Msg= {msg_json}')
+            cfg.soc_index[msg_json['p_index']] = float(msg_json['p_contents']['current_soc'])
+            pass
+
+        else:
+            print(f'Unknown Msg= {msg_str}')
+            pass
+    except json.JSONDecodeError as e:
+        print(f"msg not json format: {e}")
 
 
-    # pms get response 처리
-    elif (msg_json['p_type'] == 'get' and msg_json['p_cmd'] == 'response/soc_report'):
-        print(cfg.soc_index)
-        print(f'get Response Msg= {msg_json}')
-        cfg.soc_index[msg_json['p_index']] = float(msg_json['p_contents']['current_soc'])
-
-    else:
-        print(f'Unknown Msg= {msg_str}')
 
