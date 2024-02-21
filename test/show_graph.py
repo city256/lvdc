@@ -16,7 +16,6 @@ def sum_data(data, start_time, end_time):
     print('PV = ', sum_pv)
     print('cha = ', sum_charge)
     print('dis = ', sum_discharge)
-
     return
 
 # CSV 파일 읽기

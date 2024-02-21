@@ -1,7 +1,8 @@
 import threading
 import db_fn
 import datetime
-from datetime import timedelta
+from sklearn.svm import SVR  # SVM 회귀 모델
+import matplotlib.pyplot as plt
 import time
 from selenium import webdriver
 import pandas as pd
@@ -10,6 +11,8 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import GRU
+from tensorflow.keras.layers import SimpleRNN
 from sklearn.ensemble import RandomForestRegressor
 import config as cfg
 import re
@@ -68,8 +71,6 @@ def old_predict_load():
     # 모델 훈련
     model.fit(trainX, trainY, epochs=50, batch_size=12, verbose=1)
 
-
-
     # 예측하려는 날짜 설정
     #predict_until = pd.to_datetime(now_hour) + datetime.timedelta(days=predict_range)
     predict_until = pd.to_datetime('2023-10-08 00:00:00')
@@ -113,9 +114,9 @@ def predict_load_lstm():
 
     print('entering load')
     start_time = time.time()
-    # LSTM
+
     # CSV 파일 로드
-    df = db_fn.get_load_data()
+    df = db_fn.get_load_data_15()
     df['date'] = pd.to_datetime(df['date'])
 
     # 데이터 전처리
@@ -159,9 +160,167 @@ def predict_load_lstm():
         input_data = scaler.transform(input_data)  # 정규화
         predicted = model.predict(input_data.reshape(1, n_past, 3))  # reshape 및 예측
         df.loc[i, 'load'] = round(predicted[0][0] * max(train_df['load']), 2) # 정규화 해제 및 저장
-    df.to_csv('pred_load.csv')
+    df.to_csv('pred_load_lstm.csv')
     print('load done : ', time.time() - start_time)
     pass
+
+
+def predict_load_gru():
+
+    print('entering load')
+    start_time = time.time()
+
+    # CSV 파일 로드
+    df = db_fn.get_load_data_15()
+    df['date'] = pd.to_datetime(df['date'])
+
+    # 데이터 전처리
+    df['hour'] = df['date'].dt.hour
+    df['minute'] = df['date'].dt.minute  # 15분 단위 데이터를 처리하기 위해 분도 추출
+
+    # NaN이 아닌 부분을 훈련 데이터로 사용
+    train_df = df.dropna()
+
+    # Feature와 label 분리
+    features = train_df[['hour', 'minute', 'workday']].values
+    labels = train_df['load'].values
+
+    # 데이터 정규화
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    features = scaler.fit_transform(features)
+    labels = labels / max(labels)  # 간단하게 0~1 범위로 정규화
+
+    # GRU에 입력할 데이터 형태로 변환
+    X, y = [], []
+    n_past = 672  # 과거 x개 데이터를 사용
+    for i in range(n_past, len(features)):
+        X.append(features[i - n_past:i])
+        y.append(labels[i])
+
+    X = np.array(X)
+    y = np.array(y)
+
+    # GRU 모델 구성
+    model = Sequential()
+    model.add(GRU(100, activation='relu', input_shape=(n_past, 3)))  # LSTM 대신 GRU 사용
+    model.add(Dense(1))
+    model.compile(optimizer='adam', loss='mse')
+
+    # 모델 훈련
+    model.fit(X, y, epochs=50, batch_size=32, verbose=1)
+
+    # NaN인 load 값을 예측
+    for i in range(len(df) - 96, len(df)):
+        input_data = df.loc[i - n_past:i - 1, ['hour', 'minute', 'workday']].values
+        input_data = scaler.transform(input_data)  # 정규화
+        predicted = model.predict(input_data.reshape(1, n_past, 3))  # reshape 및 예측
+        df.loc[i, 'load'] = round(predicted[0][0] * max(train_df['load']), 2) # 정규화 해제 및 저장
+    df.to_csv('pred_load_gru.csv')
+    print('load done : ', time.time() - start_time)
+    pass
+
+def predict_load_svm():
+    print('entering load')
+    start_time = time.time()
+
+    # CSV 파일 로드
+    df = db_fn.get_load_data_15()
+    df['date'] = pd.to_datetime(df['date'])
+
+    # 데이터 전처리
+    df['hour'] = df['date'].dt.hour
+    df['minute'] = df['date'].dt.minute
+
+    # NaN이 아닌 부분을 훈련 데이터로 사용
+    train_df = df.dropna()
+
+    # Feature와 label 분리
+    features = train_df[['hour', 'minute', 'workday']].values
+    labels = train_df['load'].values
+
+    # 데이터 정규화
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    features = scaler.fit_transform(features)
+    labels = labels / max(labels)
+
+    # 데이터 분할
+    split_index = int(len(features) * 0.8)  # 80%는 훈련, 20%는 테스트
+    X_train, X_test = features[:split_index], features[split_index:]
+    y_train, y_test = labels[:split_index], labels[split_index:]
+
+    # SVM 모델 구성 및 훈련
+    model = SVR(kernel='rbf')  # RBF 커널을 사용한 SVR
+    model.fit(X_train, y_train)
+
+    # 예측
+    predicted = model.predict(X_test)
+    predicted = predicted * max(train_df['load'])  # 역정규화
+
+    # 실제 값과 예측 값을 그래프로 비교
+    plt.figure(figsize=(15, 5))
+    plt.plot(y_test * max(train_df['load']), label='Actual Load', color='blue')
+    plt.plot(predicted, label='Predicted Load', color='red')
+    plt.title('SVM Load Prediction')
+    plt.xlabel('Time')
+    plt.ylabel('Load')
+    plt.legend()
+    plt.show()
+
+    print('load done : ', time.time() - start_time)
+def predict_load_rnn():
+
+    print('entering load')
+    start_time = time.time()
+
+    # CSV 파일 로드
+    df = db_fn.get_load_data_15()
+    df['date'] = pd.to_datetime(df['date'])
+
+    # 데이터 전처리
+    df['hour'] = df['date'].dt.hour
+    df['minute'] = df['date'].dt.minute  # 15분 단위 데이터를 처리하기 위해 분도 추출
+
+    # NaN이 아닌 부분을 훈련 데이터로 사용
+    train_df = df.dropna()
+
+    # Feature와 label 분리
+    features = train_df[['hour', 'minute', 'workday']].values
+    labels = train_df['load'].values
+
+    # 데이터 정규화
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    features = scaler.fit_transform(features)
+    labels = labels / max(labels)  # 간단하게 0~1 범위로 정규화
+
+    # RNN에 입력할 데이터 형태로 변환
+    X, y = [], []
+    n_past = 672  # 과거 x개 데이터를 사용
+    for i in range(n_past, len(features)):
+        X.append(features[i - n_past:i])
+        y.append(labels[i])
+
+    X = np.array(X)
+    y = np.array(y)
+
+    # RNN 모델 구성
+    model = Sequential()
+    model.add(SimpleRNN(100, activation='relu', input_shape=(n_past, 3)))  # GRU 대신 SimpleRNN 사용
+    model.add(Dense(1))
+    model.compile(optimizer='adam', loss='mse')
+
+    # 모델 훈련
+    model.fit(X, y, epochs=50, batch_size=32, verbose=1)
+
+    # NaN인 load 값을 예측
+    for i in range(len(df) - 96, len(df)):
+        input_data = df.loc[i - n_past:i - 1, ['hour', 'minute', 'workday']].values
+        input_data = scaler.transform(input_data)  # 정규화
+        predicted = model.predict(input_data.reshape(1, n_past, 3))  # reshape 및 예측
+        df.loc[i, 'load'] = round(predicted[0][0] * max(train_df['load']), 2) # 정규화 해제 및 저장
+    df.to_csv('pred_load_rnn.csv')
+    print('load done : ', time.time() - start_time)
+    pass
+
 
 
 def predict_load_xgb():
@@ -331,11 +490,12 @@ def crawling_pv():
     pred_pv = pred_pv.sort_index()
     pred_pv['pv'] = np.nan
     db_pv = pd.concat([db_pv, pred_pv], ignore_index=True)
+
     # 테스트용 데이터 삽입
-    #test_pd = pd.read_csv('pred_pv_test.csv')
     predict_pv(db_pv).to_csv('pred_pv.csv')
     print('pv done : ', time.time() - start)
     pass
+
 #crawling_pv()
 #predict_load_xgb()
 def update_csv():

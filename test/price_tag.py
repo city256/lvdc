@@ -30,9 +30,29 @@ def calculate_price(datetime_str):
             return 147.2
 
 
-df = pd.read_csv('../csv/pqms_data_pv.csv')
+x=2
+if x ==1 :
+    name = 'normal'
+    df = pd.read_csv('../csv/pqms_data_normal.csv')
+elif x==2:
+    name = 'peak'
+    df = pd.read_csv('../csv/pqms_data_peak.csv')
+elif x==3:
+    name = 'demand'
+    df = pd.read_csv('../csv/pqms_data_demand.csv')
+elif x==4:
+    name = 'pv'
+    df = pd.read_csv('../csv/pqms_data_pv.csv')
 
 df['date'] = pd.to_datetime(df['date'])  # Replace 'datetime' with your date column name
-
 df['fee'] = df['date'].apply(lambda x: calculate_price(x.strftime('%Y-%m-%d %H:%M:%S')))
-df.to_csv('hello_price.csv', index=False)  # This will save the DataFrame with the new 'fee' column
+df['price'] = df['acdc'] * df['fee']
+money = df['price'].sum()
+grid = df['acdc'].sum()
+discharge = df['ess_discharge'].sum()
+charge = df['ess_charge'].sum()
+
+print(name)
+print(f'fee = {round(money,2)}, grid = {grid}, charge = {round(charge,2)}/{round(discharge,2)}')
+#df.to_csv('pqms_data_pv.csv', index=False)  # This will save the DataFrame with the new 'fee' column
+

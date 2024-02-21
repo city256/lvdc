@@ -285,10 +285,11 @@ def get_load_data():
 
     # 원본 DataFrame에 새로운 데이터 추가
     result = pd.concat([result, new_df], ignore_index=True)
-
+    result.to_csv('load_data.csv')
     conn.commit()
     conn.close()
     return result
+
 
 def get_load_data_15():
     conn = conn_db()
