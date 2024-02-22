@@ -78,6 +78,7 @@ for x in range(0,5):
     # 근무시간 요금
     print(f'worktime fee = {round(money,2)}, grid = {round(grid,2)}, charge = {round(charge,2)}/{round(discharge,2)}, load = {round(load, 2)}, pv = {round(pv,2)}')
 
+    # 229 / 147.2 / 204.6
     on_peak = df[df['fee'] == 204.6]
     on_peak_money = on_peak['price'].sum()
     on_peak_grid = on_peak['acdc'].sum()
@@ -86,6 +87,7 @@ for x in range(0,5):
     on_peak_pv = on_peak['pv'].sum()
     on_peak_load = on_peak['load'].sum()
 
+    # 146.9 / 116.5 / 147.1
     mid_peak = df[df['fee'] == 147.1]
     mid_peak_money = mid_peak['price'].sum()
     mid_peak_grid = mid_peak['acdc'].sum()
@@ -94,6 +96,7 @@ for x in range(0,5):
     mid_peak_pv = mid_peak['pv'].sum()
     mid_peak_load = mid_peak['load'].sum()
 
+    # 94 / 94.0 / 101.0
     off_peak = df[df['fee'] == 101.0]
     off_peak_money = off_peak['price'].sum()
     off_peak_grid = off_peak['acdc'].sum()
@@ -104,9 +107,9 @@ for x in range(0,5):
 
 
 
-    print(f'on_peak fee = {round(on_peak_money, 2)}, grid = {on_peak_grid}, charge = {round(on_peak_charge, 2)}/{round(on_peak_discharge, 2)}, load = {round(on_peak_load, 2)}, pv = {round(on_peak_pv,2)}')
-    print(f'mid_peak fee = {round(mid_peak_money, 2)}, grid = {mid_peak_grid}, charge = {round(mid_peak_charge, 2)}/{round(mid_peak_discharge, 2)}, load = {round(mid_peak_load, 2)}, pv = {round(mid_peak_pv,2)}')
-    print(f'off_peak fee = {round(off_peak_money, 2)}, grid = {off_peak_grid}, charge = {round(off_peak_charge, 2)}/{round(off_peak_discharge, 2)}, load = {round(off_peak_load, 2)}, pv = {round(off_peak_pv,2)}')
+    print(f'on_peak fee = {round(on_peak_money, 2)}, grid = {round(on_peak_grid,2)}, charge = {round(on_peak_charge, 2)}/{round(on_peak_discharge, 2)}, load = {round(on_peak_load, 2)}, pv = {round(on_peak_pv,2)}')
+    print(f'mid_peak fee = {round(mid_peak_money, 2)}, grid = {round(mid_peak_grid,2)}, charge = {round(mid_peak_charge, 2)}/{round(mid_peak_discharge, 2)}, load = {round(mid_peak_load, 2)}, pv = {round(mid_peak_pv,2)}')
+    print(f'off_peak fee = {round(off_peak_money, 2)}, grid = {round(off_peak_grid,2)}, charge = {round(off_peak_charge, 2)}/{round(off_peak_discharge, 2)}, load = {round(off_peak_load, 2)}, pv = {round(off_peak_pv,2)}')
 
 
     if x ==1 :
