@@ -8,23 +8,23 @@ def calculate_price(datetime_str):
     hour = dt.hour
 
     if 6 <= month <= 8: # 여름철
-        if 22 <= hour or hour <= 8: # 경부하
+        if 22 < hour or hour <= 8: # 경부하
             return 94
-        elif 8 <= hour <= 11 or 12 <= hour <= 13 or 18 <= hour <= 22: # 중간부하
+        elif 8 < hour <= 11 or 12 < hour <= 13 or 18 < hour <= 22: # 중간부하
             return 146.9
         else: # 최대부하
             return 229
     elif month in [11, 12, 1, 2]: # 겨울철
-        if 22 <= hour or hour <= 8:  # 경부하
+        if 22 < hour or hour <= 8:  # 경부하
             return 101
-        elif 8 <= hour <= 9 or 12 <= hour <= 16 or 19 <= hour <= 22:  # 중간부하
+        elif 8 < hour <= 9 or 12 < hour <= 16 or 19 < hour <= 22:  # 중간부하
             return 147.1
         else:  # 최대부하
             return 204.6
     else :  # 봄, 가을철
-        if 22 <= hour or hour <= 8:  # 경부하
+        if 22 < hour or hour <= 8:  # 경부하
             return 94
-        elif 8 <= hour <= 11 or 12 <= hour <= 13 or 18 <= hour <= 22:  # 중간부하
+        elif 8 < hour <= 11 or 12 < hour <= 13 or 18 < hour <= 22:  # 중간부하
             return 116.5
         else:  # 최대부하
             return 147.2
@@ -64,8 +64,8 @@ for x in range(0,5):
     # 전체 요금
     print(f'day fee = {round(money,2)}, grid = {round(grid,2)}, charge = {round(charge,2)}/{round(discharge,2)}, load = {round(load, 2)}, pv = {round(pv,2)}')
 
-    start_date = pd.to_datetime('2023-11-03 10:00')
-    end_date = pd.to_datetime('2023-11-03 18:00')
+    start_date = pd.to_datetime('2023-10-03 10:00')
+    end_date = pd.to_datetime('2023-10-03 18:00')
 
     work_time = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
     money = work_time['price'].sum()
@@ -79,7 +79,7 @@ for x in range(0,5):
     print(f'worktime fee = {round(money,2)}, grid = {round(grid,2)}, charge = {round(charge,2)}/{round(discharge,2)}, load = {round(load, 2)}, pv = {round(pv,2)}')
 
     # 229 / 147.2 / 204.6
-    on_peak = df[df['fee'] == 204.6]
+    on_peak = df[df['fee'] == 147.2]
     on_peak_money = on_peak['price'].sum()
     on_peak_grid = on_peak['acdc'].sum()
     on_peak_charge = on_peak['ess_charge'].sum()
@@ -88,7 +88,7 @@ for x in range(0,5):
     on_peak_load = on_peak['load'].sum()
 
     # 146.9 / 116.5 / 147.1
-    mid_peak = df[df['fee'] == 147.1]
+    mid_peak = df[df['fee'] == 116.5]
     mid_peak_money = mid_peak['price'].sum()
     mid_peak_grid = mid_peak['acdc'].sum()
     mid_peak_charge = mid_peak['ess_charge'].sum()
@@ -97,7 +97,7 @@ for x in range(0,5):
     mid_peak_load = mid_peak['load'].sum()
 
     # 94 / 94.0 / 101.0
-    off_peak = df[df['fee'] == 101.0]
+    off_peak = df[df['fee'] == 94]
     off_peak_money = off_peak['price'].sum()
     off_peak_grid = off_peak['acdc'].sum()
     off_peak_charge = off_peak['ess_charge'].sum()

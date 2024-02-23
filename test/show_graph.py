@@ -19,7 +19,7 @@ def sum_data(data, start_time, end_time):
     return
 
 # CSV 파일 읽기
-data = pd.read_csv('../csv/pqms_data_peak.csv', parse_dates=['date'])
+data = pd.read_csv('../csv/pqms_data_peak2.csv', parse_dates=['date'])
 
 # datetime 컬럼을 인덱스로 설정
 data.set_index('date', inplace=True)
