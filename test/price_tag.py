@@ -67,7 +67,7 @@ for x in range(0,5):
     start_date = pd.to_datetime('2023-10-03 10:00')
     end_date = pd.to_datetime('2023-10-03 18:00')
 
-    work_time = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+    work_time = df[(df['date'] >= start_date) & (df['date'] <= end_date) & df['workday']==1]
     money = work_time['price'].sum()
     grid = work_time['acdc'].sum()
     discharge = work_time['ess_discharge'].sum()

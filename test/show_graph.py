@@ -19,13 +19,13 @@ def sum_data(data, start_time, end_time):
     return
 
 # CSV 파일 읽기
-data = pd.read_csv('../csv/pqms_data_peak2.csv', parse_dates=['date'])
+data = pd.read_csv('../test/pqms_data_normal.csv', parse_dates=['date'])
 
 # datetime 컬럼을 인덱스로 설정
 data.set_index('date', inplace=True)
 
 # 특정 기간 동안의 데이터만 필터링 (예: '2022-01-01'부터 '2022-12-31'까지)
-filtered_data = data['2023-10-24 10:00:00':'2023-10-24 18:00:00']
+filtered_data = data['2023-10-02 00:00:00':'2023-10-04 00:00:00']
 
 # 데이터를 시간별로 그룹화하고 평균값을 계산
 #filtered_data = filtered_data.resample('H').mean()
@@ -42,11 +42,11 @@ discharge = filtered_data['ess_discharge']
 plt.figure(figsize=(30,15))  # 그래프 크기를 수정
 
 # 각 값에 대한 그래프를 그림
-plt.plot(acdc.index, acdc, 'm', label='DC Grid', marker='o', linestyle='-')
-plt.plot(load.index, load, 'darkorange', label='Load', marker='.', linestyle='--')
-plt.plot(pv.index, pv, 'g', label='PV', marker='x', linestyle='-.')
-plt.plot(charge.index, charge, 'blue', label='Charge',  marker='x', linestyle='-.')
-plt.plot(discharge.index, discharge, 'red', label='Discharge',  marker='x', linestyle='-.')
+plt.plot(acdc.index, acdc, 'm', label='Grid', marker='o', linestyle='-', linewidth='3')
+plt.plot(load.index, load, 'darkorange', label='Load', marker='.', linestyle='-.', linewidth='2')
+plt.plot(pv.index, pv, color='darkgreen', label='PV', marker='x', linestyle='-.', linewidth='2')
+plt.plot(charge.index, charge, 'blue', label='Charge',  marker='v', linestyle='-', linewidth='3')
+plt.plot(discharge.index, discharge, 'red', label='Discharge',  marker='s', linestyle='-', linewidth='3')
 
 
 # 그래프에 제목 및 라벨 추가
@@ -56,6 +56,6 @@ plt.ylabel('kWh',fontsize=30)
 plt.grid(True)
 plt.xticks(fontsize=20)
 plt.yticks(fontsize=20)
-plt.legend(fontsize=18)  # 범례 표시
+plt.legend(fontsize=25, ncol=5, loc='upper left', frameon=True, shadow=True)  # 범례 표시
 plt.tight_layout()
 plt.show()
