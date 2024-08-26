@@ -9,10 +9,10 @@ import pandas as pd
 from selenium.webdriver.common.by import By
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
-from tensorflow.keras.layers import GRU
-from tensorflow.keras.layers import SimpleRNN
+from tensorflow.python.keras.models import Sequential
+from keras.src.layers import *
+from tensorflow.python.keras.layers import Dense
+from tensorflow.python.keras.layers import SimpleRNN
 from sklearn.ensemble import RandomForestRegressor
 import config as cfg
 import re
@@ -496,8 +496,9 @@ def crawling_pv():
     print('pv done : ', time.time() - start)
     pass
 
-#crawling_pv()
-#predict_load_xgb()
+predict_load_gru()
+crawling_pv()
+
 def update_csv():
     print(datetime.datetime.now(),'- start predict')
     start_time = time.time()

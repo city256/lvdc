@@ -1,15 +1,16 @@
 import datetime
 import random
 import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adam
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense
+from tensorflow.python.keras.optimizers import adam_v2
 from collections import deque
 from datetime import timedelta
 import db_fn
-from tensorflow.keras.models import load_model
+from tensorflow.python.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
+
 
 total_episodes = 100
 batch_size = 32
@@ -60,7 +61,7 @@ class DQNAgent:
         model.add(Dense(24, input_dim=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
-        model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
+        model.compile(optimizer=adam_v2.Adam(learning_rate=self.learning_rate), loss='mse')
         return model
 
     def remember(self, state, action, reward, next_state, done):
@@ -178,7 +179,7 @@ action_size = 501  # 행동 크기 (-250 ~ 250)
 agent = DQNAgent(state_size, action_size)
 env = EMSEnvironment()
 
-'''
+
 # 학습 루프
 for e in range(20):  # 에피소드 수
     print('episode = ', e)
@@ -196,7 +197,7 @@ for e in range(20):  # 에피소드 수
             break
         if len(agent.memory) > 32:
             agent.replay(32)
-'''
+
 model_save_path = 'dqn_model.h5'
 
 #agent.save(model_save_path)
