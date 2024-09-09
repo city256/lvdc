@@ -6,7 +6,6 @@ from tensorflow.python.keras.layers import Dense
 from tensorflow.python.keras.optimizers import adam_v2
 from collections import deque
 from datetime import timedelta
-import db_fn
 from tensorflow.python.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
@@ -132,7 +131,7 @@ class EMSEnvironment:
         self.sum_charge = 0
         self.sum_grid = 0
         self.sum_fee = 0
-        self.soc = db_fn.get_pms_soc()
+        self.soc = 50
         self.load = float(round(self.data.loc[self.data['Unnamed: 0_x'] == self.current_index, 'load'].iloc[0], 2))
         self.pv = float(round(self.data.loc[self.data['Unnamed: 0_x'] == self.current_index, 'pv'].iloc[0], 2))
         return np.array([self.soc, self.load, self.pv, self.price])
@@ -181,7 +180,7 @@ env = EMSEnvironment()
 
 
 # 학습 루프
-for e in range(20):  # 에피소드 수
+for e in range(5):  # 에피소드 수
     print('episode = ', e)
     state = env.reset()
     state = np.reshape(state, [1, state_size])
