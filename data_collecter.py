@@ -1,4 +1,7 @@
 import threading
+
+import tensorflow.python.keras.layers
+
 import db_fn
 import datetime
 from sklearn.svm import SVR  # SVM 회귀 모델
@@ -147,7 +150,7 @@ def predict_load_lstm():
 
     # LSTM 모델 구성
     model = Sequential()
-    model.add(LSTM(100, activation='relu', input_shape=(n_past, 3)))  # input_shape 수정
+    model.add(tensorflow.python.keras.layers.LSTM(100, activation='relu', input_shape=(n_past, 3)))  # input_shape 수정
     model.add(Dense(1))
     model.compile(optimizer='adam', loss='mse')
 
@@ -496,7 +499,7 @@ def crawling_pv():
     print('pv done : ', time.time() - start)
     pass
 
-predict_load_gru()
+predict_load_lstm()
 crawling_pv()
 
 def update_csv():
