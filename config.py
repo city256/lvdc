@@ -51,7 +51,7 @@ min_capacity = ess_capacity * (soc_min * 0.01)
 soc = 0.4
 target_soc = 0.473
 
-# ess 충방전, 목표 soc에 따른 power_reference 계산 (15분 단위)
+# ess_action 충방전, 목표 soc에 따른 power_reference 계산 (15분 단위)
 ess_energy = ess_capacity * (target_soc - soc) # 양수는 충전필요량, 음수는 방전필요량
 ess_energy = round(ess_energy, 2)
 ess_time = ess_energy / (conv_capacity_1h * 0.25) # 15분 주기로 충방전량 나누기
