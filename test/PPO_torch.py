@@ -268,28 +268,26 @@ def calculate_price(datetime_str):
     dt_15m_ago = dt - datetime.timedelta(minutes=15)
     month = dt_15m_ago.month
     hour = dt_15m_ago.hour
-
-
-    if 6 <= month <= 8: # 여름철
-        if 22 <= hour or hour <= 8: # 경부하
+    if 6 <= month <= 8:  # 여름철 (June-August)
+        if 22 <= hour or hour <= 8:  # 경부하 (Off-peak)
             return 94, 0
-        elif 8 <= hour <= 11 or 12 <= hour <= 13 or 18 <= hour <= 22: # 중간부하
+        elif 8 <= hour <= 11 or 12 <= hour <= 13 or 18 <= hour <= 22:  # 중간부하 (Mid-peak)
             return 146.9, 1
-        else: # 최대부하
+        else:  # 최대부하 (Maximum peak)
             return 229, 2
-    elif month in [11, 12, 1, 2]: # 겨울철
-        if 22 <= hour or hour <= 8:  # 경부하
+    elif month in [11, 12, 1, 2]:  # 겨울철 (November-February)
+        if 22 <= hour or hour <= 8:  # 경부하 (Off-peak)
             return 101, 0
-        elif 8 <= hour <= 9 or 12 <= hour <= 16 or 19 <= hour <= 22:  # 중간부하
+        elif 8 <= hour <= 9 or 12 <= hour <= 16 or 19 <= hour <= 22:  # 중간부하 (Mid-peak)
             return 147.1, 1
-        else:  # 최대부하
+        else:  # 최대부하 (Maximum peak)
             return 204.6, 2
-    else :  # 봄, 가을철
-        if 22 <= hour or hour <= 8:  # 경부하
+    else:  # 봄, 가을철 (March-May, September-November)
+        if 22 <= hour or hour <= 8:  # 경부하 (Off-peak)
             return 94, 0
-        elif 8 <= hour <= 11 or 12 <= hour <= 13 or 18 <= hour <= 22:  # 중간부하
+        elif 8 <= hour <= 11 or 18 <= hour <= 22:  # 중간부하 (Mid-peak)
             return 116.5, 1
-        else:  # 최대부하
+        elif 11 <= hour <= 12 or 13 <= hour <= 18:  # 최대부하 (Maximum peak)
             return 147.2, 2
 
 
@@ -415,7 +413,7 @@ class PPOAgent(nn.Module):
         soc, load, pv, grid, total_cost, switch_sum, peak, peak_time, workday = current_state
 
         # 현재 스텝의 다음 스텝 데이터를 가져옴
-        next_step = env.current_step + 1  # 다음 스텝 인덱스를 증가시킴
+        next_step = env.current_step  # 다음 스텝 인덱스를 증가시킴
         if next_step < len(env.data):
             next_load = float(env.data.loc[env.data['Unnamed: 0_x'] == next_step, 'load'].iloc[0])
             next_pv = float(env.data.loc[env.data['Unnamed: 0_x'] == next_step, 'pv'].iloc[0])
@@ -623,19 +621,21 @@ def train_ppo(env, agent, memory, episodes=1000, save_interval=10, patience=50):
             action_values.append(action)
             date_values.append(env.current_date)
 
+            if (t + 1) % 100 == 0:
+                # 에피소드가 끝난 후 업데이트
+                agent.update(memory)
+
             if done:
                 break
 
             state = next_state
 
+
+
         # 마지막 보상에 total_cost 기반 추가 보상
         memory.rewards[-1] += -env.total_cost * 0.05
-
-        # 에피소드가 끝난 후 업데이트
-        agent.update(memory)
-        memory.clear_memory()
-
         episode_rewards.append(total_reward)  # 에피소드별 총 보상을 저장
+        memory.clear_memory()
 
         # 최고 리워드 에피소드 갱신
         if total_reward > best_reward:
@@ -789,4 +789,4 @@ train_ppo(env, ppo_agent, memory, episodes=1000, save_interval=100, patience=300
 test_csv = pd.read_csv('0907_0911.csv')
 test_env = Environment(test_csv)
 # 학습된 에이전트로 테스트 실행
-#run_test(test_env, "test_ppo_1000.pth", ppo_agent)
+#run_test(test_env, "test_ppo_400.pth", ppo_agent)

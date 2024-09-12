@@ -304,30 +304,88 @@ def plot_results(dates, load, pv, grid, action, soc, e_num):
     plt.show()
 
 
-# def apply_constraints( current_state, action, env):
-#     soc, load, pv, grid, total_cost, switch_sum, peak, peak_time, workday = current_state
-#
-#     # 현재 스텝의 다음 스텝 데이터를 가져옴
-#     next_step = env.current_step + 1  # 다음 스텝 인덱스를 증가시킴
-#     if next_step < len(env.data):
-#         next_load = float(env.data.loc[env.data['Unnamed: 0_x'] == next_step, 'load'].iloc[0])
-#         next_pv = float(env.data.loc[env.data['Unnamed: 0_x'] == next_step, 'pv'].iloc[0])
-#     else:
-#         next_load = load
-#         next_pv = pv
-#
-#     # 충전/방전 후 예상 SoC 계산
-#     expected_soc = soc + (action / 4) / env.battery_cap  # action은 kW 단위, SoC는 비율
-#     expected_grid = next_load - next_pv
-#     expected_grid_action = expected_grid + (action / 4)
-#
-#     # Grid 계산이 제대로 이루어지는지 확인하기 위해 출력
-#     print(f"[{env.current_step}] Next Step: {next_step}, Load: {next_load}, PV: {next_pv}, Grid: {expected_grid}")
-#
-#     # 기존 제약 조건 로직
-#     # ...
-#
-#     return action
+def apply_constraints(current_state, action, env):
+    soc, load, pv, grid, total_cost, switch_sum, peak, peak_time, workday = current_state
+
+    # 현재 스텝의 다음 스텝 데이터를 가져옴
+    next_step = env.current_step  # 다음 스텝 인덱스를 증가시킴
+    if next_step < len(env.data):
+        next_load = float(env.data.loc[env.data['Unnamed: 0_x'] == next_step, 'load'].iloc[0])
+        next_pv = float(env.data.loc[env.data['Unnamed: 0_x'] == next_step, 'pv'].iloc[0])
+    else:
+        next_load = load
+        next_pv = pv
+
+    # SoC 제약 조건 적용
+    max_charge = min(env.conv_cap, (env.soc_max - soc) * env.battery_cap)
+    max_discharge = min(env.conv_cap, (soc - env.soc_min) * env.battery_cap)
+
+    # 충전/방전 후 예상 SoC 계산
+    expected_soc = soc + (action / 4) / env.battery_cap  # action은 kW 단위, SoC는 비율
+    expected_grid = next_load - next_pv
+    expected_grid_action = expected_grid + (action / 4)
+    print(f'First action: {action}, soc:{soc}/{expected_soc}, next_grid:{expected_grid}/{expected_grid_action}')
+
+    # 역송 발생 시 충전으로 전환, 이때 SoC를 고려하여 충전량 제한
+    if expected_grid < 0:
+        if soc <= env.soc_max:
+            action = min(max_charge, (-4 * expected_grid) * 1.1)  # 역송된 만큼 충전
+            expected_soc = soc + (action / 4) / env.battery_cap
+            expected_grid_action = expected_grid + (action / 4)
+            print(f'Natural reverse: {action}, soc:{soc}/{expected_soc}, next_grid:{expected_grid_action}')
+        else:  # 충전 용량 없으면 대기
+            action = 0
+            expected_soc = soc + (action / 4) / env.battery_cap
+            expected_grid_action = expected_grid + (action / 4)
+            print(
+                f'Natural reverse, cant charge: {action}, soc:{soc}/{expected_soc}, next_grid:{expected_grid_action}')
+    else:
+        # 랜덤 액션으로 인한 역송 발생 ==> soc_min 까지 방전 or 대기
+        if expected_grid_action < 0:
+            if expected_soc <= env.soc_min:  # 예상 soc가 10% 이하일때 soc_min 까지만 방전
+                max_safe_discharge = (soc - env.soc_min) * env.battery_cap * 4
+                action = max(-max_safe_discharge * 0.9, -max_discharge, (-4 * expected_grid) * 0.9)
+                expected_soc = soc + (action / 4) / env.battery_cap
+                expected_grid_action = expected_grid + (action / 4)
+                print(f'reverse action: {action}, soc:{soc}/{expected_soc}, next_grid:{expected_grid_action}')
+            else:  # soc <= soc_max
+                action = max(-(4 * expected_grid) * 0.9, -max_discharge)
+                expected_soc = soc
+                expected_grid_action = expected_grid + (action / 4)
+                print(f'reverse cant action: {action}, soc:{soc}/{expected_soc}, next_grid:{expected_grid_action}')
+        else:
+            if expected_soc < env.soc_min:
+                required_action = (env.soc_min - soc) * env.battery_cap * 4
+                action = max(required_action, action)
+                expected_soc = soc + (action / 4) / env.battery_cap
+                expected_grid_action = expected_grid + (action / 4)
+                print(
+                    f'Adjusted action to maintain soc_min: {action}, soc:{soc}/{expected_soc}, next_grid:{expected_grid_action}')
+            elif expected_soc > env.soc_max:
+                required_action = (env.soc_max - soc) * env.battery_cap * 4
+                action = min(required_action, action)
+                expected_soc = soc + (action / 4) / env.battery_cap
+                expected_grid_action = expected_grid + (action / 4)
+                print(
+                    f'Adjusted action to maintain soc_max: {action}, soc:{soc}/{expected_soc}, next_grid:{expected_grid_action}')
+            else:
+                action = max(-max_discharge, min(action, max_charge))
+                expected_soc = soc + (action / 4) / env.battery_cap
+                expected_grid_action = expected_grid + (action / 4)
+                print(f'meaningful action:{action}, soc:{soc}/{expected_soc}, next_grid:{expected_grid_action}')
+
+    # 작은 액션 제거 (노이즈 방지)
+    if -20 < action < 20:
+        action = 0
+        print("Action is too small, setting to 0.")
+
+    expected_soc = soc + (action / 4) / env.battery_cap
+    expected_grid_action = expected_grid + (action / 4)
+    print(
+        f'Load/PV: {next_load}/{next_pv}, Next grid: {expected_grid}, Grid with act: {expected_grid_action}, Expected SoC: {expected_soc}')
+
+    return action
+
 
 def apply_normal(current_state, action, env):
     soc, load, pv, grid, total_cost, switch_sum, peak, peak_time, workday = current_state
@@ -491,7 +549,7 @@ for t in range(env.total_steps):
     grid_values.append(env.grid)
     soc_values.append(env.soc)
 
-    action = apply_demand(state, 100, env)
+    action = apply_constraints(state, 0, env)
     action_values.append(action)
 
     next_state, reward, done = env.step(action)
