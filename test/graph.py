@@ -2,16 +2,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the CSV file
-file_path = 'rule_based.csv'
+file_path = 'ess_data.csv'
 df = pd.read_csv(file_path)
 
 # Convert the 'date' column to datetime format if it's not already
 df['date'] = pd.to_datetime(df['date'])
-
+# 18~20 :X 06~ 18
 # Filter the DataFrame for a specific date range
-start_date = '2023-08-22'  # Replace with your start date
-end_date = '2023-09-25'    # Replace with your end date
+start_date = '2023-09-11'  # Replace with your start date
+end_date = '2023-09-18'    # Replace with your end date
 df_filtered = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+# 주말 08~09, 16~17, 23~24
 
 # Calculate the Grid values
 df_filtered['grid'] = df_filtered['load'] - df_filtered['pv']

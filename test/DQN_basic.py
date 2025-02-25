@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # hyperparameters
 seed = 33
 state_dim = 9  # 상태 벡터 차원
-action_dim = 1  # 단일 action: 충/방전
+action_dim = 501  # 단일 action: 충/방전
 hidden_dim = 128
 learning_rate = 3e-4 # 0.0003
 gamma = 0.995
@@ -131,6 +131,7 @@ class Environment:
         self.current_step = 0
         self.date = self.data.loc[self.data['Unnamed: 0_x'] == self.current_step, 'date'].iloc[0]
         self.month, self.day, self.hour = date(self.date)
+        self.next_day_holiday = is_next_day_holiday(self.date)
 
         self.done = False
         self.soc = 0.5
@@ -155,10 +156,12 @@ class Environment:
         self.episode_reward = 0
 
         state = self.get_normalized_state()
-        state_info = [self.soc, self.load, self.pv, self.grid, self.peak, self.peak_time, self.workday, self.month, self.day, self.hour, self.next_load, self.next_pv]
+        state_info = [self.soc, self.load, self.pv, self.grid, self.peak, self.peak_time, self.workday, self.next_load, self.next_pv, self.next_day_holiday]
         return state, state_info
 
     def step(self, action):
+        if isinstance(action, torch.Tensor):  # ndarray
+            action = action.item()  # 또는 action[0] 사용 가능 float, int
         # 현재 상태 업데이트
         current_date = self.data.loc[self.data['Unnamed: 0_x'] == self.current_step, 'date'].iloc[0]
         current_load = float(self.data.loc[self.data['Unnamed: 0_x'] == self.current_step, 'load'].iloc[0])
@@ -174,7 +177,7 @@ class Environment:
         current_grid = current_load - current_pv + (action / 4)
         current_soc = calculate_soc(self.soc, action, self.battery_cap)
         current_price, current_peak_time = calculate_price(self.date)
-        #current_usage_cost = current_price * max(current_grid, 0)
+        # current_usage_cost = current_price * max(current_grid, 0)
         current_usage_cost = current_price * abs(current_grid)
         current_peak = calculate_peak(self.peak, current_load, current_pv, action, self.contract)
 
@@ -205,6 +208,7 @@ class Environment:
         self.peak_time = current_peak_time
         self.soc = current_soc
         self.workday = check_workday(self.date)
+        self.next_day_holiday = is_next_day_holiday(self.date)
         self.peak = current_peak
         self.usage_cost = current_usage_cost
         self.usage_sum += current_usage_cost
@@ -212,19 +216,19 @@ class Environment:
         self.demand_sum = self.peak * self.demand_cost
         self.total_cost = (self.demand_sum + self.usage_sum) * 1.137
 
-        # 보상 계산
-        reward = self.compute_reward(action)
-
         # 에피소드 종료 시 누적된 total_cost를 보상으로 반영
         if self.current_step >= self.total_steps - 1:
             self.done = True
+
+        # 보상 계산
+        reward = self.compute_reward(action)
 
         self.current_step += 1
         self.episode_reward += reward
 
         # 다음 상태에 적용
         next_state = self.get_normalized_state()
-        next_state_info = [self.soc, self.load, self.pv, self.grid, self.peak, self.peak_time, self.workday, self.month, self.day, self.hour, self.next_load, self.next_pv]
+        next_state_info = [self.soc, self.load, self.pv, self.grid, self.peak, self.peak_time, self.workday, self.next_load, self.next_pv, self.next_day_holiday]
         #print(f'[{self.current_step-1}] : {next_state_info} = {action}')
         #print(f'[{self.current_step-1}] : {next_state} = {action}')
         #self.render(action, reward)
@@ -235,12 +239,33 @@ class Environment:
         reward = self.previous_total_cost - current_total_cost
         reward2 = -self.usage_cost
 
+        # # 역송 방지 패널티
+        # if self.grid < 0:  # 그리드가 음수일 때 (역송)
+        #     reward -= 2.0 * abs(self.grid)  # 역송이 발생할 때 패널티 부여
+        #     reward2 -= 2.0 * abs(self.grid)
+        #
+        #     # 추가 보상 요소
+        # if self.peak_time == 0 and action > 0:  # 경부하 시간에 충전 시 보상
+        #     reward += 0.2 * abs(action)
+        #     reward2 += 0.2 * abs(action)
+        # elif self.peak_time == 2 and action < 0:  # 최대부하 시간에 방전 시 보상
+        #     reward += 0.3 * abs(action)
+        #     reward2 += 0.3 * abs(action)
+        #
+        # # SoC 범위 유지 보상/패널티
+        # if self.soc < self.soc_min:
+        #     reward -= 1.0  # SoC가 soc_min 미만일 때 패널티
+        #     reward2 -= 1.0
+        # elif self.soc > self.soc_max:
+        #     reward -= 1.0  # SoC가 soc_max 초과일 때 패널티
+        #     reward2 -= 1.0
+
         self.previous_total_cost = current_total_cost
         normal_reward = reward_normalizer_ma.normalize(reward) / 10
         normal_reward2 = reward_normalizer_ma.normalize(reward2) / 10
         w = 0.5
-        # return normal_reward
-        return (normal_reward * w) + (normal_reward2 * (w-1))
+        return reward / 100000
+        # return (normal_reward * w) + (normal_reward2 * (1-w))
 
     def get_normalized_state(self):
         # SoC는 이미 0과 1 사이이므로 그대로 사용
@@ -271,6 +296,13 @@ class Environment:
         print(f'action: {action}')
         print("-" * 40)
 
+def is_next_day_holiday(date_str):
+    date = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+    holidays = pytimekr.holidays(date.year)  # 해당 연도의 공휴일 목록
+    next_day = date + datetime.timedelta(days=1)
+    is_holiday = next_day.date() in holidays  # 공휴일 여부
+    is_weekend = next_day.weekday() >= 5  # 주말 여부 (5: 토요일, 6: 일요일)
+    return 1 if is_holiday or is_weekend else 0  # 공휴일 또는 주말이면 1, 아니면 0
 def date(date_str):
     date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
 
@@ -355,143 +387,130 @@ def calculate_soc(previous_soc, action, max_capacity):
     soc = ((max_capacity * previous_soc) + (action/4))/1000
     return max(0, min(1, soc))
 
-class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim, max_action):
-        super(Actor, self).__init__()
-        self.network = nn.Sequential(
+# DQN 네트워크 정의
+class DQN(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_dim=128):
+        super(DQN, self).__init__()
+        self.net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, action_dim),
-            nn.Tanh()  # 행동 범위가 -1 ~ 1로 제한됨
-        )
-        self.max_action = max_action
-
-    def forward(self, state):
-        return self.max_action * self.network(state)
-
-class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim):
-        super(Critic, self).__init__()
-        self.q1 = nn.Sequential(
-            nn.Linear(state_dim + action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
-        )
-        self.q2 = nn.Sequential(
-            nn.Linear(state_dim + action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, action_dim)
         )
 
-    def forward(self, state, action):
-        sa = torch.cat([state, action], dim=-1)
-        return self.q1(sa), self.q2(sa)
+    def forward(self, x):
+        return self.net(x)
 
-
-class TD3:
-    def __init__(self, state_dim, action_dim, hidden_dim, max_action, lr=3e-4, gamma=0.99, tau=0.005, policy_noise=0.2,
-                 noise_clip=0.5, policy_delay=2):
-        self.actor = Actor(state_dim, action_dim, hidden_dim, max_action).to(device)
-        self.actor_target = Actor(state_dim, action_dim, hidden_dim, max_action).to(device)
-        self.actor_target.load_state_dict(self.actor.state_dict())
-
-        self.critic = Critic(state_dim, action_dim, hidden_dim).to(device)
-        self.critic_target = Critic(state_dim, action_dim, hidden_dim).to(device)
-        self.critic_target.load_state_dict(self.critic.state_dict())
-
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr)
-
-        self.max_action = max_action
+# DQN 에이전트 클래스
+class DQNAgent:
+    def __init__(self, state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim, lr=learning_rate, gamma=gamma, epsilon=1.0, epsilon_decay=0.995, min_epsilon=0.1):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.epsilon = epsilon
+        self.epsilon_decay = epsilon_decay
+        self.min_epsilon = min_epsilon
         self.gamma = gamma
-        self.tau = tau
-        self.policy_noise = policy_noise
-        self.noise_clip = noise_clip
-        self.policy_delay = policy_delay
-        self.total_it = 0
+        self.memory = []
+        self.batch_size = batch_size
+        self.lr = lr
 
-    def select_action(self, state):
-        state = torch.FloatTensor(state).unsqueeze(0).to(device)
-        action = self.actor(state).cpu().data.numpy().flatten()
-        return action
+        # 네트워크와 타겟 네트워크 생성
+        self.policy_net = DQN(state_dim, action_dim, hidden_dim).to(device)
+        self.target_net = DQN(state_dim, action_dim, hidden_dim).to(device)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=self.lr)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.target_net.eval()
 
-    def train(self, memory, batch_size=100):
-        self.total_it += 1
+    def select_action(self, state, env):
+        state = torch.FloatTensor(state).unsqueeze(0).to(device)  # 상태를 GPU로 이동
 
-        # 샘플링
-        state, action, next_state, reward, done = memory.sample(batch_size)
-
-        state = torch.FloatTensor(state).to(device)
-        action = torch.FloatTensor(action).to(device)
-        next_state = torch.FloatTensor(next_state).to(device)
-        reward = torch.FloatTensor(reward).to(device)
-        done = torch.FloatTensor(done).to(device)
-
-        # Target policy noise 추가 및 클리핑
-        noise = torch.FloatTensor(action).data.normal_(0, self.policy_noise).to(device)
-        noise = noise.clamp(-self.noise_clip, self.noise_clip)
-
-        next_action = (self.actor_target(next_state) + noise).clamp(-self.max_action, self.max_action)
-
-        # Target Q-value 계산
-        target_q1, target_q2 = self.critic_target(next_state, next_action)
-        target_q = torch.min(target_q1, target_q2)
-        target_q = reward + ((1 - done) * self.gamma * target_q).detach()
-
-        # Critic 업데이트
-        current_q1, current_q2 = self.critic(state, action)
-        critic_loss = F.mse_loss(current_q1, target_q) + F.mse_loss(current_q2, target_q)
-
-        self.critic_optimizer.zero_grad()
-        critic_loss.backward()
-        self.critic_optimizer.step()
-
-        # Policy 업데이트 (지연된 업데이트)
-        if self.total_it % self.policy_delay == 0:
-            actor_loss = -self.critic.q1(state, self.actor(state)).mean()
-            self.actor_optimizer.zero_grad()
-            actor_loss.backward()
-            self.actor_optimizer.step()
-
-            # Target 네트워크 업데이트
-            for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-
-            for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-
-class ReplayBuffer:
-    def __init__(self, max_size=1e6):
-        self.storage = []
-        self.max_size = int(max_size)
-        self.ptr = 0
-
-    def add(self, state, action, next_state, reward, done):
-        data = (state, action, next_state, reward, done)
-
-        if len(self.storage) < self.max_size:
-            self.storage.append(data)
+        # Epsilon-greedy 정책에 따라 행동 선택
+        if random.random() < self.epsilon:
+            action_index = random.randint(0, self.action_dim - 1)  # 무작위 인덱스 선택
         else:
-            self.storage[self.ptr] = data
-            self.ptr = (self.ptr + 1) % self.max_size
+            with torch.no_grad():
+                q_values = self.policy_net(state)
+                action_index = torch.argmax(q_values).item()  # 가장 큰 Q-값에 해당하는 행동 선택
 
-    def sample(self, batch_size):
-        ind = np.random.randint(0, len(self.storage), size=batch_size)
-        state, action, next_state, reward, done = zip(*[self.storage[i] for i in ind])
+        # 행동 인덱스를 실제 행동 값으로 변환 (-250 ~ 250)
+        action = action_index - 250  # action_dim이 501이므로 -250에서 +250 범위의 정수
 
-        return (
-            np.array(state),
-            np.array(action),
-            np.array(next_state),
-            np.array(reward).reshape(-1, 1),
-            np.array(done).reshape(-1, 1),
-        )
+        # SoC 제약조건 적용
+        current_soc = state[0, 0].item()  # 현재 SoC 값
+
+        # 충전 및 방전 범위를 계산
+        max_charge = float(min(env.conv_cap, (env.soc_max - current_soc) * env.battery_cap))
+        max_discharge = float(min(env.conv_cap, (current_soc - env.soc_min) * env.battery_cap))
+
+        # 현재 SoC와 action으로 예측된 SoC 계산
+        predicted_soc = current_soc + (action / 4) / env.battery_cap
+
+        # 방전량 조정: SoC가 `soc_min` 미만으로 내려가지 않도록 함
+        if predicted_soc < env.soc_min:
+            max_allowed_discharge = (current_soc - env.soc_min) * env.battery_cap * 4  # 방전량을 조정
+            action = max(action, -max_allowed_discharge)
+
+        # 충전량 조정: SoC가 `soc_max`를 초과하지 않도록 함
+        if predicted_soc > env.soc_max:
+            max_allowed_charge = (env.soc_max - current_soc) * env.battery_cap * 4  # 충전량을 조정
+            action = min(action, max_allowed_charge)
+
+        # 최종 SoC 범위 내에서 행동 제한
+        action = np.clip(action, -max_discharge, max_charge)
+
+        # print(f"Current SoC: {current_soc:.2f}, Predicted SoC: {predicted_soc:.2f}, Action: {action}")
+
+        return action  # 제한된 행동 반환
+
+    def store_transition(self, transition):
+        self.memory.append(transition)
+        if len(self.memory) > 10000:  # 최대 메모리 크기 제한
+            self.memory.pop(0)
+
+    def train(self):
+        if len(self.memory) < self.batch_size:
+            return
+
+        # 미니배치 샘플링
+        batch = random.sample(self.memory, self.batch_size)
+        states, actions, rewards, next_states, dones = zip(*batch)
+
+        # 배열 변환 최적화 및 차원 맞추기
+        states = torch.FloatTensor(np.array(states)).to(device)
+        actions = torch.LongTensor(np.array(actions)).unsqueeze(1).to(device)
+        rewards = torch.FloatTensor(np.array(rewards)).view(-1, 1).to(device)  # 차원 조정
+        next_states = torch.FloatTensor(np.array(next_states)).to(device)
+        dones = torch.FloatTensor(np.array(dones)).view(-1, 1).to(device)  # 차원 조정
+
+        # actions 값이 action_dim 내의 양수 인덱스로 변환되도록 보장
+        actions = actions + (self.action_dim // 2)  # 음수 인덱스를 양수 인덱스로 변환
+
+        # 현재 상태에 대한 Q값 계산
+        current_q_values = self.policy_net(states).gather(1, actions)
+
+        # 다음 상태에서의 최대 Q값 계산
+        next_q_values = self.target_net(next_states).max(1)[0].detach().view(-1, 1)  # 차원 조정
+        target_q_values = rewards + (1 - dones) * self.gamma * next_q_values
+
+        # target_q_values의 크기가 current_q_values와 맞는지 확인
+        if target_q_values.size() != current_q_values.size():
+            print(
+                f"Debug: current_q_values size: {current_q_values.size()}, target_q_values size: {target_q_values.size()}")
+            target_q_values = target_q_values[:current_q_values.size(0)]  # 크기 맞춤
+
+        # 손실 함수 계산 및 역전파
+        loss = nn.SmoothL1Loss()(current_q_values, target_q_values)  # Huber Loss
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        # 탐욕 정책 업데이트
+        self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
+
+    def update_target_network(self, tau=0.005):
+        for target_param, local_param in zip(self.target_net.parameters(), self.policy_net.parameters()):
+            target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
 
 
 def plot_results(dates, load, pv, grid, action, soc, e_num):
@@ -537,8 +556,7 @@ def plot_results(dates, load, pv, grid, action, soc, e_num):
     plt.tight_layout()
     plt.show()
 
-
-def train_ppo(env, agent, memory, episodes=episodes, save_interval=save_interval, max_timesteps=max_timesteps, batch_interval = batch_interval):
+def train_dqn(env, agent, episodes=episodes, save_interval=save_interval, max_timesteps=max_timesteps, batch_interval = batch_interval):
     timestep = 0
     episode_rewards = []
     actions = []
@@ -549,44 +567,26 @@ def train_ppo(env, agent, memory, episodes=episodes, save_interval=save_interval
 
         for t in range(max_timesteps):
             # 에이전트가 환경으로부터 액션을 선택
-            action = agent.select_action(state, memory, env)
+            action = agent.select_action(state, env)
+            # print(f'[{env.current_step}] {env.soc} : {action - agent.action_dim // 2}')
 
             # 환경에서 한 스텝을 진행하여 다음 상태와 보상을 얻음
-            next_state, reward, done, next_state_info = env.step(action)
+            next_state, reward, done, _ = env.step(action)  # action_dim의 절반을 빼서 음수/양수 변환
 
-            # 메모리에 보상과 종료 여부를 저장
-            memory.rewards.append(reward)
-            memory.is_terminals.append(done)
+            agent.store_transition((state, action, reward, next_state, done))
+            agent.train()
 
-            total_reward += reward
-
-            # 누적 보상 계산
-            #print(f'[{env.current_step}] reward = {reward}, total = {total_reward} / {env.total_cost}')
-
-            # 상태를 업데이트
             state = next_state
+            total_reward += reward
             timestep += 1
 
-            # batch_interval마다 업데이트 및 메모리 초기화
-            if timestep % batch_interval == 0:
-                agent.update(memory)
-                memory.clear_memory()
-
-            # 에피소드 종료 체크
             if done:
                 break
 
-        # 메모리에 저장된 action들 자료형 ndarray로 통일 ==> select_action에서 변경시 안해도 됨
-        # memory.actions = [np.array([[action]]) if not isinstance(action, np.ndarray) else action for action in
-        #                   memory.actions]
+        # 타겟 네트워크 주기적으로 업데이트
+        if (episode + 1) % batch_interval == 0:
+            agent.update_target_network()
 
-        # 에피소드가 끝날 때마다 정책 업데이트
-        if timestep % batch_interval != 0:
-            agent.update(memory)
-            memory.clear_memory()
-
-        # agent.update(memory)
-        # memory.clear_memory()
 
         # 에피소드 보상 기록
         episode_rewards.append(total_reward)
@@ -596,20 +596,20 @@ def train_ppo(env, agent, memory, episodes=episodes, save_interval=save_interval
             f'Episode {episode + 1}/{episodes} finished with reward: {total_reward.item() if isinstance(total_reward, np.ndarray) else float(total_reward):.2f} / {env.total_cost}')
         # 모델 저장
         if (episode + 1) % save_interval == 0:
-            torch.save(agent.policy.state_dict(), f"basic_{episode + 1}.pth")
+            torch.save(agent.policy_net.state_dict(), f"dqn_{episode + 1}.pth")
 
     # 학습 보상 시각화
     episode_rewards.pop(0)
     plt.plot(episode_rewards)
     plt.xlabel('Episode')
     plt.ylabel('Total Reward')
-    plt.title('Training Reward over Episodes(Basic)')
+    plt.title('Training Reward over Episodes(DQN)')
     plt.show()
 
-def run_test(env, model_path, agent, test=0, reference_value=0, scale = 1):
+def run_test(env, model_path, agent, reference_value=0, scale=1):
     # 모델 로드
-    agent.policy.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
-    agent.policy.eval()
+    agent.policy_net.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
+    agent.policy_net.eval()  # 평가 모드로 설정
 
     state, state_info = env.reset()
 
@@ -625,18 +625,40 @@ def run_test(env, model_path, agent, test=0, reference_value=0, scale = 1):
 
     # 테스트 루프
     for t in range(env.total_steps):
-        # 추론 시에는 탐색을 비활성화합니다
-        if test == 1:
-            with torch.no_grad():
-                action, _ = agent.policy.test_act(torch.FloatTensor(state).unsqueeze(0), env, scale)
-        else:
-            with torch.no_grad():
-                action, _ = agent.policy.act(torch.FloatTensor(state).unsqueeze(0))
+        with torch.no_grad():
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(device)
+            q_values = agent.policy_net(state_tensor)
+            action_index = torch.argmax(q_values).item()  # 최대 Q-값에 해당하는 행동 선택
+            action = action_index - (agent.action_dim // 2)  # 음수/양수 범위로 변환
 
-        # Adjust action based on the reference value
-        adjusted_action = action[0].item() - reference_value
+        # SoC 제약조건 적용
+        current_soc = env.soc  # 현재 SoC 값
 
-        next_state, reward, done, next_state_info = env.step(adjusted_action)  # adjusted action 사용
+        # 충전 및 방전 범위를 계산
+        max_charge = float(min(env.conv_cap, (env.soc_max - current_soc) * env.battery_cap))
+        max_discharge = float(min(env.conv_cap, (current_soc - env.soc_min) * env.battery_cap))
+
+        # 현재 SoC와 action으로 예측된 SoC 계산
+        predicted_soc = current_soc + (action / 4) / env.battery_cap
+
+        # 방전량 조정: SoC가 `soc_min` 미만으로 내려가지 않도록 함
+        if predicted_soc < env.soc_min:
+            max_allowed_discharge = (current_soc - env.soc_min) * env.battery_cap * 4  # 방전량을 조정
+            action = max(action, -max_allowed_discharge)
+
+        # 충전량 조정: SoC가 `soc_max`를 초과하지 않도록 함
+        if predicted_soc > env.soc_max:
+            max_allowed_charge = (env.soc_max - current_soc) * env.battery_cap * 4  # 충전량을 조정
+            action = min(action, max_allowed_charge)
+
+        # 최종 SoC 범위 내에서 행동 제한
+        action = np.clip(action, -max_discharge, max_charge)
+
+        # 행동 조정 (예: 기준값을 뺀다거나 하는 방식)
+        adjusted_action = action - reference_value
+
+        # 환경에서 스텝 진행
+        next_state, reward, done, next_state_info = env.step(adjusted_action)
 
         # 각 값들을 스칼라로 변환하여 저장
         pv_values.append(float(state_info[2]))    # 발전 값
@@ -651,6 +673,7 @@ def run_test(env, model_path, agent, test=0, reference_value=0, scale = 1):
         if done:
             break
 
+        # 다음 상태로 전환
         state = next_state
         state_info = next_state_info
 
@@ -663,6 +686,7 @@ def run_test(env, model_path, agent, test=0, reference_value=0, scale = 1):
         'final_reward': total_reward
     }
 
+    # 비용 정보 출력
     print(f"\nCost information from test run:")
     print(f"Total cost: {cost_info['total_cost']}")
     print(f"Usage sum: {cost_info['usage_sum']}")
@@ -675,21 +699,17 @@ def run_test(env, model_path, agent, test=0, reference_value=0, scale = 1):
 
     return cost_info
 
+
 test_csv = pd.read_csv('gloom_hol.csv')
 work_env = Environment(workday_csv)
 hol_env = Environment(holiday_csv)
 test_env = Environment(test_csv)
-env = work_env
+env = test_env
 
-# 메모리 및 에이전트 초기화
-memory = Memory()
-ppo_agent = PPO(state_dim, action_dim, hidden_dim=hidden_dim)
-
-# GPU 설정 (초기화 이후 어디서든 가능합니다)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-ppo_agent.policy.to(device)  # 모델을 GPU로 이동
+dqn_agent = DQNAgent(state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
 
 # 학습 및 추론
-train_ppo(env, ppo_agent, memory, max_timesteps=env.total_steps)
-run_test(env, f"basic_{episodes}.pth", ppo_agent)
-# run_test(env, f"basic_600.pth", ppo_agent, 1,170, 1.4)
+train_dqn(env, dqn_agent, max_timesteps=env.total_steps)
+run_test(env, f"dqn_{episodes}.pth", dqn_agent)
+# run_test(env, f"dqn_400.pth", dqn_agent, 0,1)
